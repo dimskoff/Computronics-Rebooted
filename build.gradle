@@ -20,7 +20,7 @@ java {
 sourceSets {
     main {
         java {
-            srcDirs = ['src/main/java', 'src/api/java']
+            srcDirs = ['src/main/java']
         }
     }
     test {
@@ -78,6 +78,9 @@ repositories {
 dependencies {
     compileOnly "org.jspecify:jspecify:1.0.0"
     implementation "com.typesafe:config:1.4.3"
+
+    compileOnly files('libs/opencomputers-1.9.4-5.jar')
+    testImplementation files('libs/opencomputers-1.9.4-5.jar')
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
