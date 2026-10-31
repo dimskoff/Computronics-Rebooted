@@ -38,6 +38,12 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.CONTROL_PANEL.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> SPEECH_BOX = ITEMS.register("speech_box",
             () -> new BlockItem(ModBlocks.SPEECH_BOX.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> ENTITY_DETECTOR = ITEMS.register("entity_detector",
+            () -> new BlockItem(ModBlocks.ENTITY_DETECTOR.get(), new Item.Properties()));
+
+    // Handheld Terminals
+    public static final DeferredItem<ItemPocketTerminal> POCKET_TERMINAL = ITEMS.register("pocket_terminal",
+            () -> new ItemPocketTerminal(new Item.Properties().rarity(Rarity.RARE)));
 
     // Control Panel Modular Elements
     public static final DeferredItem<ItemMiniLamp> MINI_LAMP = ITEMS.register("mini_lamp",

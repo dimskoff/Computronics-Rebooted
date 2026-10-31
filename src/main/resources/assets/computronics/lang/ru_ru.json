@@ -13,6 +13,13 @@
   "block.computronics.iron_noteblock": "Железный нотный блок",
   "block.computronics.control_panel": "Модульная панель управления",
   "block.computronics.speech_box": "Голосовой блок (Speech Box)",
+  "block.computronics.entity_detector": "Детектор сущностей",
+
+  "item.computronics.pocket_terminal": "Карманный терминал",
+  "tooltip.computronics.pocket_terminal.desc1": "Компактный беспроводной терминал и пейджер с выводом данных на экран.",
+  "tooltip.computronics.pocket_terminal.desc2": "Принимает команды рисования и текста через беспроводную сеть OpenComputers.",
+  "tooltip.computronics.pocket_terminal.desc3": "ПКМ переключает питание. Заряжается на индукционной панели.",
+  "tooltip.computronics.entity_detector.desc": "Высокоточный детектор игроков и сущностей с конусом направленного сканирования.",
 
   "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
   "item.computronics.mini_button": "Тактильная кнопка управления",

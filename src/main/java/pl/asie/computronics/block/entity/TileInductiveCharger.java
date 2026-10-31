@@ -12,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -76,6 +78,37 @@ public class TileInductiveCharger extends TileEntityComputronics {
                 if (toTransfer > 0 && connector().tryChangeBuffer(-toTransfer)) {
                     if (drone.machine().node() instanceof Connector droneConn) {
                         droneConn.changeBuffer(toTransfer);
+                    }
+                }
+            }
+        }
+
+        // 3. Charge players standing on or directly above the charger pad
+        AABB playerBox = new AABB(
+                pos.getX(), pos.getY() + 1.0, pos.getZ(),
+                pos.getX() + 1.0, pos.getY() + 2.5, pos.getZ() + 1.0
+        );
+        List<Player> players = level.getEntitiesOfClass(Player.class, playerBox);
+        for (Player p : players) {
+            double buffer = connector().globalBuffer();
+            if (buffer <= 0) break;
+            for (ItemStack itemStack : p.getInventory().items) {
+                if (itemStack.getItem() instanceof li.cil.oc.api.driver.item.Chargeable chargeable && chargeable.canCharge(itemStack)) {
+                    double toTransfer = Math.min(chargeRate, connector().globalBuffer());
+                    if (toTransfer <= 0) break;
+                    double charged = chargeable.charge(itemStack, toTransfer, false);
+                    if (charged > 0) {
+                        connector().tryChangeBuffer(-charged);
+                    }
+                }
+            }
+            ItemStack offhand = p.getOffhandItem();
+            if (offhand.getItem() instanceof li.cil.oc.api.driver.item.Chargeable chargeable && chargeable.canCharge(offhand)) {
+                double toTransfer = Math.min(chargeRate, connector().globalBuffer());
+                if (toTransfer > 0) {
+                    double charged = chargeable.charge(offhand, toTransfer, false);
+                    if (charged > 0) {
+                        connector().tryChangeBuffer(-charged);
                     }
                 }
             }

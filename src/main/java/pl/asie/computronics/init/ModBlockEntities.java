@@ -49,4 +49,7 @@ public class ModBlockEntities {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileSpeechBox>> SPEECH_BOX =
             BLOCK_ENTITIES.register("speech_box", () -> BlockEntityType.Builder.of(TileSpeechBox::new, ModBlocks.SPEECH_BOX.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileEntityDetector>> ENTITY_DETECTOR =
+            BLOCK_ENTITIES.register("entity_detector", () -> BlockEntityType.Builder.of(TileEntityDetector::new, ModBlocks.ENTITY_DETECTOR.get()).build(null));
 }

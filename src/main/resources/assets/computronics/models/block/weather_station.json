@@ -2,11 +2,11 @@
   "parent": "minecraft:block/cube",
   "textures": {
     "particle": "computronics:block/digital_receiver_box",
-    "north": "computronics:block/digital_receiver_box",
-    "south": "computronics:block/machine_side",
+    "north": "computronics:block/digital_controller_box",
+    "south": "computronics:block/machine_side_bundled_output",
     "east": "computronics:block/machine_side",
     "west": "computronics:block/machine_side",
-    "up": "computronics:block/machine_top",
+    "up": "computronics:block/digital_receiver_box",
     "down": "computronics:block/machine_bottom"
   }
 }

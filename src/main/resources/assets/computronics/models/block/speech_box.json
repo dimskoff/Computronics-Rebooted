@@ -3,9 +3,9 @@
   "textures": {
     "particle": "computronics:block/speech_box_front",
     "north": "computronics:block/speech_box_front",
-    "south": "computronics:block/machine_side",
-    "east": "computronics:block/machine_side",
-    "west": "computronics:block/machine_side",
+    "south": "computronics:block/speaker_front",
+    "east": "computronics:block/machine_side_bundled_output",
+    "west": "computronics:block/machine_side_bundled_output",
     "up": "computronics:block/machine_top",
     "down": "computronics:block/machine_bottom"
   }

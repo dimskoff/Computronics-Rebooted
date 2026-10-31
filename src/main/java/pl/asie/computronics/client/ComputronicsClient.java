@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import pl.asie.computronics.Computronics;
 import pl.asie.computronics.block.BlockComputronics;
 import pl.asie.computronics.init.ModItems;
@@ -21,6 +22,8 @@ public class ComputronicsClient {
     public static void onClientSetup(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             try {
+                NeoForge.EVENT_BUS.register(PocketTerminalRenderer.INSTANCE);
+
                 Manual.addProvider(new ResourceContentProvider("computronics", "doc/"));
                 Manual.addTab(
                         new ItemStackTabIconRenderer(new ItemStack(ModItems.TAPE_DRIVE.get())),
@@ -50,6 +53,21 @@ public class ComputronicsClient {
                         if (stack.getItem() instanceof ItemRFJammerCard) {
                             return "%LANGUAGE%/computronics/item/rf_jammer_card.md";
                         }
+                        if (stack.getItem() instanceof ItemCardBeep) {
+                            return "%LANGUAGE%/computronics/item/card_beep.md";
+                        }
+                        if (stack.getItem() instanceof ItemCardFX) {
+                            return "%LANGUAGE%/computronics/item/card_fx.md";
+                        }
+                        if (stack.getItem() instanceof ItemPocketTerminal) {
+                            return "%LANGUAGE%/computronics/item/pocket_terminal.md";
+                        }
+                        if (stack.getItem() instanceof ItemMiniLamp) {
+                            return "%LANGUAGE%/computronics/item/mini_lamp.md";
+                        }
+                        if (stack.getItem() instanceof ItemMiniButton) {
+                            return "%LANGUAGE%/computronics/item/mini_button.md";
+                        }
                         if (stack.getItem() instanceof ItemChatUpgrade) {
                             return "%LANGUAGE%/computronics/item/chat_upgrade.md";
                         }
@@ -61,6 +79,9 @@ public class ComputronicsClient {
                         }
                         if (stack.getItem() instanceof ItemWinchUpgrade) {
                             return "%LANGUAGE%/computronics/item/winch_upgrade.md";
+                        }
+                        if (stack.getItem() instanceof ItemSpeechUpgrade) {
+                            return "%LANGUAGE%/computronics/item/speech_upgrade.md";
                         }
                         return null;
                     }
@@ -76,9 +97,9 @@ public class ComputronicsClient {
                         return null;
                     }
                 });
-                Computronics.LOGGER.info("Computronics: OpenComputers Manual integration initialized successfully.");
+                Computronics.LOGGER.info("Computronics: OpenComputers Manual and Pocket Terminal Renderer initialized successfully.");
             } catch (Throwable t) {
-                Computronics.LOGGER.warn("Computronics: Could not initialize OpenComputers manual: {}", t.getMessage());
+                Computronics.LOGGER.warn("Computronics: Could not initialize client systems: {}", t.getMessage());
             }
         });
     }

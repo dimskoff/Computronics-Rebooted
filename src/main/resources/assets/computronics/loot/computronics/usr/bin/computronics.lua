@@ -140,6 +140,7 @@ local H = {
     beep         = component.isAvailable("beep") and component.beep or nil,
     fx           = component.isAvailable("particle_fx") and component.particle_fx or nil,
     speech       = component.isAvailable("speech_box") and component.speech_box or nil,
+    detector     = component.isAvailable("entity_detector") and component.entity_detector or nil,
 }
 
 local function rescanHardware()
@@ -161,6 +162,7 @@ local function rescanHardware()
     H.beep     = component.isAvailable("beep") and component.beep or nil
     H.fx       = component.isAvailable("particle_fx") and component.particle_fx or nil
     H.speech   = component.isAvailable("speech_box") and component.speech_box or nil
+    H.detector = component.isAvailable("entity_detector") and component.entity_detector or nil
 
     if H.modem and not H.modem.isOpen(netPort) then
         pcall(function() H.modem.open(netPort) end)
@@ -232,21 +234,23 @@ end
 -- ============================================================================
 local TABS = {
     {id = 1,  name = "1:DASH",     title = "SYSTEM DASHBOARD",     comp = nil},
-    {id = 2,  name = "2:CAMERA",   title = "OPTICAL CAMERA",       comp = "camera"},
+    {id = 2,  name = "2:CAM",      title = "OPTICAL CAMERA",       comp = "camera"},
     {id = 3,  name = "3:RADAR",    title = "3D ENTITY RADAR",      comp = "radar"},
     {id = 4,  name = "4:TAPE",     title = "AUDIO TAPE DECK",      comp = "tape_drive"},
-    {id = 5,  name = "5:CHAT",     title = "CHAT BOX & INTERCOM",  comp = "chat_box"},
-    {id = 6,  name = "6:ACOUSTIC", title = "SCULK VIBRATION SENSOR",comp = "acoustic_sensor"},
-    {id = 7,  name = "7:WEATHER",  title = "WEATHER OBSERVATORY",  comp = "weather_station"},
-    {id = 8,  name = "8:CHARGER",  title = "INDUCTIVE CHARGE PAD", comp = "inductive_charger"},
+    {id = 5,  name = "5:CHAT",     title = "CHAT BOX & SPEECH",    comp = "chat_box"},
+    {id = 6,  name = "6:SCULK",    title = "SCULK VIBRATION SENSOR",comp = "acoustic_sensor"},
+    {id = 7,  name = "7:METEO",    title = "WEATHER OBSERVATORY",  comp = "weather_station"},
+    {id = 8,  name = "8:CHG",      title = "INDUCTIVE CHARGE PAD", comp = "inductive_charger"},
     {id = 9,  name = "9:LASER",    title = "LASER TRANSCEIVER",    comp = "laser_transceiver"},
     {id = 10, name = "10:GAUGE",   title = "ANALOG DIAL GAUGE",    comp = "analog_gauge"},
-    {id = 11, name = "11:NET/TAP", title = "NETWORK & SNIFFER",    comp = "packet_sniffer"},
-    {id = 12, name = "12:JAMMER",  title = "RF SIGNAL JAMMER",     comp = "rf_jammer"},
+    {id = 11, name = "11:NET",     title = "NETWORK & SNIFFER",    comp = "packet_sniffer"},
+    {id = 12, name = "12:JAM",     title = "RF SIGNAL JAMMER",     comp = "rf_jammer"},
     {id = 13, name = "13:BOOM",    title = "SELF-DESTRUCT CARD",   comp = "self_destruct"},
     {id = 14, name = "14:NOTE",    title = "IRON NOTE BLOCK",      comp = "iron_noteblock"},
     {id = 15, name = "15:PANEL",   title = "MODULAR CONTROL PANEL",comp = "control_panel"},
-    {id = 16, name = "16:FX/BEEP", title = "PARTICLE FX & BEEP",   comp = "particle_fx"},
+    {id = 16, name = "16:FX",      title = "PARTICLE FX & BEEP",   comp = "particle_fx"},
+    {id = 17, name = "17:DETECT",  title = "ENTITY DETECTOR",      comp = "entity_detector"},
+    {id = 18, name = "18:POCKET",  title = "POCKET TERMINAL",      comp = "modem"},
 }
 
 -- Render Header & Tab Navigation
@@ -272,9 +276,9 @@ local function renderChrome()
     setColors(C.TEXT, C.BG)
     gpu.fill(1, 2, screenW, 2, " ")
 
-    -- First 8 tabs on row 2
+    -- First 9 tabs on row 2
     local curX = 2
-    for i = 1, 8 do
+    for i = 1, 9 do
         local tab = TABS[i]
         local isAct = (currentTab == tab.id)
         local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
@@ -288,21 +292,11 @@ local function renderChrome()
         curX = curX + tw + 1
     end
 
-    -- Remaining 8 tabs on row 3
+    -- Next 9 tabs on row 3
     curX = 2
-    for i = 9, #TABS do
+    for i = 10, #TABS do
         local tab = TABS[i]
         local isAct = (currentTab == tab.id)
-        local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
-        local fgCol = isAct and C.BG or C.TAB_TEXT
-        local label = " " .. tab.name .. " "
-        local tw = unicode.len(label)
-        addButton("tab_" .. tab.id, curX, 3, tw, 1, label, function()
-            currentTab = tab.id
-            setStatus("Switched to " .. tab.title)
-        end, bgCol, fgCol)
-        curX = curX + tw + 1
-    end
         local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
         local fgCol = isAct and C.BG or C.TAB_TEXT
         local label = " " .. tab.name .. " "
@@ -1614,6 +1608,213 @@ local function renderFXBeep()
 end
 
 -- ============================================================================
+-- TAB 17: ENTITY DETECTOR
+-- ============================================================================
+local detectorScanResults = {}
+local detectorLastScan = 0
+local function renderEntityDetector()
+    local bX, bY, bW, bH = 2, 5, screenW - 2, screenH - 6
+    drawBox(bX, bY, bW, bH, "ENTITY DETECTOR (DIRECTIONAL CONE SCANNER)")
+
+    if not H.detector then
+        renderMissingComp("entity_detector", "BlockEntityDetector: scans players & entities in front of detector.")
+        return
+    end
+
+    local facing = "unknown"
+    local range = 16
+    local totalCount = 0
+    local playerCount = 0
+    local signalActive = false
+
+    pcall(function() facing = H.detector.getFacing() end)
+    pcall(function() range = H.detector.getRange() end)
+    pcall(function() totalCount = H.detector.count() end)
+    pcall(function() playerCount = H.detector.getPlayerCount() end)
+    pcall(function() signalActive = H.detector.isSignalEnabled() end)
+
+    -- Left Control Column
+    local cW = 28
+    setColors(C.CYAN, C.BG)
+    gpu.set(bX + 2, bY + 2, "FACING: " .. string.upper(facing))
+    gpu.set(bX + 2, bY + 3, "RANGE:  " .. range .. " blocks")
+
+    addButton("det_rminus", bX + 2, bY + 5, 5, 1, "[-5]", function()
+        pcall(function() H.detector.setRange(math.max(1, range - 5)) end)
+        setStatus("Range: " .. math.max(1, range - 5))
+    end, C.BTN_BG, C.TEXT)
+
+    addButton("det_rplus", bX + 8, bY + 5, 5, 1, "[+5]", function()
+        pcall(function() H.detector.setRange(math.min(32, range + 5)) end)
+        setStatus("Range: " .. math.min(32, range + 5))
+    end, C.BTN_BG, C.TEXT)
+
+    addButton("det_sig", bX + 2, bY + 7, 24, 1, signalActive and "[ AUTO-SIGNALS: ON ]" or "[ AUTO-SIGNALS: OFF ]", function()
+        pcall(function() H.detector.setSignalEnabled(not signalActive) end)
+        setStatus("Auto signals: " .. tostring(not signalActive))
+    end, signalActive and C.GREEN or C.BTN_BG, signalActive and C.BG or C.TEXT)
+
+    addButton("det_scan", bX + 2, bY + 9, 24, 1, "[ FULL SCAN NOW ]", function()
+        local ok, res = pcall(function() return H.detector.scan() end)
+        if ok and res then
+            detectorScanResults = res
+            detectorLastScan = computer.uptime()
+            setStatus(string.format("Scanned %d entities in cone.", #res))
+        else
+            setStatus("Scan failed or empty.")
+        end
+    end, C.TAB_ACTIVE, C.BG)
+
+    setColors(C.TEXT, C.BG)
+    gpu.set(bX + 2, bY + 11, "TOTAL IN CONE:   " .. totalCount)
+    gpu.set(bX + 2, bY + 12, "PLAYERS IN CONE: " .. playerCount)
+
+    -- Right Entity Table
+    local tX = bX + cW + 2
+    local tW = bW - cW - 4
+    setColors(C.CYAN, C.HEADER_BG)
+    gpu.fill(tX, bY + 2, tW, 1, " ")
+    gpu.set(tX + 1, bY + 2, "NAME / ID")
+    gpu.set(tX + 18, bY + 2, "TYPE")
+    gpu.set(tX + 32, bY + 2, "DIST")
+    gpu.set(tX + 39, bY + 2, "HEALTH")
+    gpu.set(tX + 48, bY + 2, "ARMOR")
+
+    local maxRows = bH - 5
+    for i = 1, maxRows do
+        local rowY = bY + 2 + i
+        local ent = detectorScanResults[i]
+        setColors(i % 2 == 0 and C.TEXT or C.TEXT_MUTED, i % 2 == 0 and C.PANEL_ALT or C.BG)
+        gpu.fill(tX, rowY, tW, 1, " ")
+        if ent then
+            local isPlr = ent.isPlayer
+            setColors(isPlr and C.CYAN or (ent.health and C.TEXT or C.YELLOW), i % 2 == 0 and C.PANEL_ALT or C.BG)
+            gpu.set(tX + 1, rowY, unicode.sub(tostring(ent.name or "Unknown"), 1, 15))
+            gpu.set(tX + 18, rowY, unicode.sub(tostring(ent.type or "-"):gsub("minecraft:", ""), 1, 13))
+            gpu.set(tX + 32, rowY, string.format("%.1fm", tonumber(ent.distance or 0)))
+            if ent.health then
+                gpu.set(tX + 39, rowY, string.format("%.0f/%.0f", ent.health, ent.maxHealth or 20))
+            else
+                gpu.set(tX + 39, rowY, "-")
+            end
+            gpu.set(tX + 48, rowY, tostring(ent.armor or 0))
+        end
+    end
+end
+
+-- ============================================================================
+-- TAB 18: POCKET TERMINAL
+-- ============================================================================
+local pocketTargetId = "all"
+local pocketLastMsg = "COMPUTRONICS ONLINE"
+local pocketLines = {
+    "== POCKET TERMINAL STREAM ==",
+    "Channel: 404 (Wireless)",
+    "Status: System Active",
+    "HUD: First-person handheld",
+    "Awaiting commands...",
+    "", "", "", "", ""
+}
+
+local function renderPocketTerminal()
+    local bX, bY, bW, bH = 2, 5, screenW - 2, screenH - 6
+    drawBox(bX, bY, bW, bH, "POCKET TERMINAL WIRELESS CONTROL & STREAMING")
+
+    if not H.modem then
+        renderMissingComp("modem", "Wireless Network Card required to transmit to Pocket Terminals.")
+        return
+    end
+
+    -- Target & Setup
+    setColors(C.TEXT, C.BG)
+    gpu.set(bX + 2, bY + 2, "TARGET TERMINAL ID: ")
+    addButton("pkt_tgt", bX + 23, bY + 2, 14, 1, "[" .. unicode.sub(pocketTargetId, 1, 10) .. "]", function()
+        local inp = promptInput("Target Terminal UUID or 'all'", pocketTargetId)
+        if inp and inp ~= "" then
+            pocketTargetId = inp
+            setStatus("Target set to: " .. pocketTargetId)
+        end
+    end, C.BTN_BG, C.CYAN)
+
+    addButton("pkt_clear", bX + 39, bY + 2, 9, 1, "[ CLEAR ]", function()
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "clear") end)
+        for i = 1, 10 do pocketLines[i] = "" end
+        setStatus("Cleared remote terminal screen.")
+    end, C.RED, C.TEXT)
+
+    addButton("pkt_beep", bX + 50, bY + 2, 8, 1, "[ BEEP ]", function()
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "beep", 1.2) end)
+        setStatus("Transmitted audio beep packet.")
+    end, C.YELLOW, C.BG)
+
+    -- Transmission controls
+    addButton("pkt_msg", bX + 2, bY + 4, 16, 1, "[ TRANSMIT MSG ]", function()
+        local msg = promptInput("Message line to print", pocketLastMsg)
+        if msg and msg ~= "" then
+            pocketLastMsg = msg
+            pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "print", msg) end)
+            table.remove(pocketLines, 1)
+            table.insert(pocketLines, msg)
+            setStatus("Transmitted: " .. msg)
+        end
+    end, C.BTN_BG, C.TEXT)
+
+    addButton("pkt_stream", bX + 20, bY + 4, 18, 1, "[ STREAM STATUS ]", function()
+        local up = math.floor(computer.uptime())
+        local mem = math.floor(computer.freeMemory() / 1024) .. "K"
+        local statusStr = "UP:" .. up .. "s MEM:" .. mem
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "print", statusStr) end)
+        table.remove(pocketLines, 1)
+        table.insert(pocketLines, statusStr)
+        setStatus("Streamed system metrics.")
+    end, C.TAB_ACTIVE, C.BG)
+
+    addButton("pkt_col_grn", bX + 40, bY + 4, 9, 1, "[ GREEN ]", function()
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "color", 0x00FF66, 0x08150A) end)
+        setStatus("Set phosphor green theme.")
+    end, C.BTN_BG, C.GREEN)
+
+    addButton("pkt_col_amb", bX + 51, bY + 4, 9, 1, "[ AMBER ]", function()
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "color", 0xFFA500, 0x1A0D00) end)
+        setStatus("Set amber phosphor theme.")
+    end, C.BTN_BG, C.YELLOW)
+
+    addButton("pkt_col_cyn", bX + 62, bY + 4, 8, 1, "[ CYAN ]", function()
+        pcall(function() H.modem.broadcast(404, "pt", pocketTargetId, "color", 0x00E5FF, 0x00141A) end)
+        setStatus("Set cyber cyan theme.")
+    end, C.BTN_BG, C.CYAN)
+
+    -- Virtual Screen Terminal Preview Box (32 x 12 characters)
+    local sX = bX + 4
+    local sY = bY + 7
+    setColors(0xCCDDEE, 0x1E2228)
+    gpu.fill(sX - 2, sY - 1, 36, 13, " ")
+    gpu.set(sX, sY - 1, "● POCKET TERMINAL PREVIEW")
+
+    setColors(0x00FF66, 0x08150A)
+    gpu.fill(sX, sY, 32, 10, " ")
+    for r = 1, 10 do
+        local line = pocketLines[r] or ""
+        gpu.set(sX + 1, sY + r - 1, unicode.sub(line, 1, 30))
+    end
+    setColors(0x556677, 0x1E2228)
+    gpu.set(sX, sY + 11, "ID:" .. unicode.sub(pocketTargetId, 1, 12) .. " CH:404")
+
+    -- Quick command instructions
+    local iX = sX + 38
+    setColors(C.TEXT, C.BG)
+    gpu.set(iX, sY, "HOLDING IN HAND:")
+    gpu.set(iX, sY + 1, "• Hold Pocket Terminal in right or offhand.")
+    gpu.set(iX, sY + 2, "• Live HUD overlay appears like a handheld map.")
+    gpu.set(iX, sY + 3, "• Right-click in hand toggles power ON / OFF.")
+    gpu.set(iX, sY + 4, "• Stand on Inductive Charger to recharge.")
+    gpu.set(iX, sY + 6, "LUA API:")
+    gpu.set(iX, sY + 7, "m.broadcast(404, 'pt', id, 'print', text)")
+    gpu.set(iX, sY + 8, "m.broadcast(404, 'pt', id, 'set', x, y, str)")
+    gpu.set(iX, sY + 9, "m.broadcast(404, 'pt', id, 'color', fg, bg)")
+end
+
+-- ============================================================================
 -- SCREEN DISPATCHER
 -- ============================================================================
 local function render()
@@ -1651,6 +1852,10 @@ local function render()
         renderControlPanel()
     elseif currentTab == 16 then
         renderFXBeep()
+    elseif currentTab == 17 then
+        renderEntityDetector()
+    elseif currentTab == 18 then
+        renderPocketTerminal()
     end
 end
 
@@ -1744,6 +1949,14 @@ while running do
         table.insert(logs.tripwire, 1, line)
         if #logs.tripwire > 20 then table.remove(logs.tripwire) end
         setStatus("LASER ALARM: " .. line)
+        render()
+
+    elseif ev == "entity_detected" then
+        local name = tostring(a or "Entity")
+        local uuid = tostring(b or "")
+        local dist = tonumber(c) or 0
+        local isPlr = tostring(d) == "true"
+        setStatus(string.format("DETECTOR: %s (%.1fm) entered cone!", name, dist))
         render()
 
     elseif ev == "modem_message" then

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "computronics:block/entity_detector" },
+    "facing=south": { "model": "computronics:block/entity_detector", "y": 180 },
+    "facing=west":  { "model": "computronics:block/entity_detector", "y": 270 },
+    "facing=east":  { "model": "computronics:block/entity_detector", "y": 90 }
+  }
+}

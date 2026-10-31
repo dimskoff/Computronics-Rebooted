@@ -69,6 +69,7 @@ public class Computronics {
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.IRON_NOTEBLOCK.get());
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.CONTROL_PANEL.get());
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.SPEECH_BOX.get());
+            registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.ENTITY_DETECTOR.get());
             LOGGER.info("Computronics: OpenComputers block capabilities registered successfully.");
         } catch (Throwable t) {
             LOGGER.warn("Computronics: Could not register OpenComputers capabilities: {}", t.getMessage());

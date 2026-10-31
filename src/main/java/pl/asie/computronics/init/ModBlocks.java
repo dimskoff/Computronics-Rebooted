@@ -54,4 +54,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<BlockSpeechBox> SPEECH_BOX =
             BLOCKS.register("speech_box", () -> new BlockSpeechBox(metal()));
+
+    public static final DeferredBlock<BlockEntityDetector> ENTITY_DETECTOR =
+            BLOCKS.register("entity_detector", () -> new BlockEntityDetector(metal()));
 }

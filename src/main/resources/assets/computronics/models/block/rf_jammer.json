@@ -3,10 +3,10 @@
   "textures": {
     "particle": "computronics:block/digital_controller_box",
     "north": "computronics:block/digital_controller_box",
-    "south": "computronics:block/machine_side",
-    "east": "computronics:block/machine_side",
-    "west": "computronics:block/machine_side",
-    "up": "computronics:block/machine_top",
+    "south": "computronics:block/digital_controller_box",
+    "east": "computronics:block/machine_side_bundled_output",
+    "west": "computronics:block/machine_side_bundled_input",
+    "up": "computronics:block/digital_receiver_box",
     "down": "computronics:block/machine_bottom"
   }
 }

@@ -13,6 +13,13 @@
   "block.computronics.iron_noteblock": "Iron Note Block",
   "block.computronics.control_panel": "Modular Control Panel",
   "block.computronics.speech_box": "Speech Box",
+  "block.computronics.entity_detector": "Entity Detector",
+
+  "item.computronics.pocket_terminal": "Pocket Terminal",
+  "tooltip.computronics.pocket_terminal.desc1": "Compact handheld wireless terminal & pager with real-time HUD display.",
+  "tooltip.computronics.pocket_terminal.desc2": "Receives wireless drawing & text streaming commands via OpenComputers.",
+  "tooltip.computronics.pocket_terminal.desc3": "Right-click toggles power. Recharges on Inductive Charger Pad.",
+  "tooltip.computronics.entity_detector.desc": "High-precision directional entity and player scanner with configurable cone.",
 
   "item.computronics.mini_lamp": "Miniature Indicator Lamp",
   "item.computronics.mini_button": "Tactile Push Button",

@@ -31,8 +31,10 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.IRON_NOTEBLOCK.get());
                         output.accept(ModBlocks.CONTROL_PANEL.get());
                         output.accept(ModBlocks.SPEECH_BOX.get());
+                        output.accept(ModBlocks.ENTITY_DETECTOR.get());
 
-                        // Items & Cards
+                        // Handhelds, Modular Elements & Cards
+                        output.accept(ModItems.POCKET_TERMINAL.get());
                         output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.MINI_BUTTON.get());
                         output.accept(ModItems.NETWORK_CARD_3.get());

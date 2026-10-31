@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "computronics:block/digital_detector",
+    "north": "computronics:block/digital_detector",
+    "south": "computronics:block/machine_side_bundled_input",
+    "east": "computronics:block/machine_side",
+    "west": "computronics:block/machine_side",
+    "up": "computronics:block/machine_top",
+    "down": "computronics:block/machine_bottom"
+  }
+}
