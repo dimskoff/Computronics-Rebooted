@@ -33,5 +33,6 @@
   "tooltip.computronics.upgrade.radar": "Equips robots and drones with a 3D entity radar.",
   "tooltip.computronics.upgrade.camera": "Equips robots and drones with optical distance and raycast scanning.",
   "tooltip.computronics.upgrade.winch": "Equips drones with a deployable winch cable and grabber hook.",
-  "tooltip.computronics.tape.capacity": "Capacity: %s"
+  "tooltip.computronics.tape.capacity": "Capacity: %s",
+  "tooltip.computronics.manual.tab": "Computronics: Rebooted"
 }

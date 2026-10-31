@@ -1,16 +1,29 @@
 package pl.asie.computronics.block.entity;
 
+import li.cil.oc.api.network.Node;
+import li.cil.oc.api.network.SidedEnvironment;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.BlockEntityEnvironment;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-public abstract class TileEntityComputronics extends BlockEntityEnvironment {
+public abstract class TileEntityComputronics extends BlockEntityEnvironment implements SidedEnvironment {
 
     public TileEntityComputronics(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
+    }
+
+    @Override
+    public Node sidedNode(Direction side) {
+        return node();
+    }
+
+    @Override
+    public boolean canConnect(Direction side) {
+        return true;
     }
 
     public void tickServer(Level level, BlockPos pos, BlockState state) {

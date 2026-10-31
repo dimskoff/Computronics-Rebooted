@@ -33,5 +33,6 @@
   "tooltip.computronics.upgrade.radar": "Оснащает роботов и дронов трёхмерным сканирующим радаром.",
   "tooltip.computronics.upgrade.camera": "Оснащает роботов и дронов камерой и рейкастом расстояния до блоков.",
   "tooltip.computronics.upgrade.winch": "Оснащает дронов тросом лебёдки и захватом предметов.",
-  "tooltip.computronics.tape.capacity": "Вместимость: %s"
+  "tooltip.computronics.tape.capacity": "Вместимость: %s",
+  "tooltip.computronics.manual.tab": "Computronics: Перезагрузка"
 }
