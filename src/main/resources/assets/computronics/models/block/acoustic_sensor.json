@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:block/cube",
   "textures": {
-    "particle": "computronics:block/machine_side",
-    "north": "computronics:block/machine_side",
-    "south": "computronics:block/machine_side",
-    "east": "computronics:block/machine_side",
-    "west": "computronics:block/machine_side",
+    "particle": "computronics:block/speaker_front",
+    "north": "computronics:block/speaker_front",
+    "south": "computronics:block/speaker_front",
+    "east": "computronics:block/speaker_front",
+    "west": "computronics:block/speaker_front",
     "up": "computronics:block/machine_top",
     "down": "computronics:block/machine_bottom"
   }
