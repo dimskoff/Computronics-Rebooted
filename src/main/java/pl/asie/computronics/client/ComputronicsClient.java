@@ -47,6 +47,9 @@ public class ComputronicsClient {
                         if (stack.getItem() instanceof ItemCardBoom) {
                             return "%LANGUAGE%/computronics/item/card_boom.md";
                         }
+                        if (stack.getItem() instanceof ItemRFJammerCard) {
+                            return "%LANGUAGE%/computronics/item/rf_jammer_card.md";
+                        }
                         if (stack.getItem() instanceof ItemChatUpgrade) {
                             return "%LANGUAGE%/computronics/item/chat_upgrade.md";
                         }

@@ -2,7 +2,6 @@ package pl.asie.computronics.network;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import pl.asie.computronics.block.entity.TileRFJammer;
 
 import java.util.Collections;
 import java.util.Random;
@@ -11,25 +10,32 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RFJammerManager {
     public static final RFJammerManager INSTANCE = new RFJammerManager();
-    private final Set<TileRFJammer> activeJammers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<IRFJammer> activeJammers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Random random = new Random();
 
-    public void register(TileRFJammer jammer) {
-        activeJammers.add(jammer);
+    public void register(IRFJammer jammer) {
+        if (jammer != null) {
+            activeJammers.add(jammer);
+        }
     }
 
-    public void unregister(TileRFJammer jammer) {
-        activeJammers.remove(jammer);
+    public void unregister(IRFJammer jammer) {
+        if (jammer != null) {
+            activeJammers.remove(jammer);
+        }
     }
 
     public boolean isAreaJammed(Level level, BlockPos pos, int frequency) {
-        for (TileRFJammer jammer : activeJammers) {
-            if (jammer.getLevel() == level && jammer.isEnabled()) {
+        for (IRFJammer jammer : activeJammers) {
+            if (jammer.getJammerLevel() == level && jammer.isEnabled()) {
                 if (jammer.getFrequency() == frequency || jammer.getFrequency() == 0) {
-                    double distSq = jammer.getBlockPos().distSqr(pos);
-                    double radius = jammer.getEffectiveRadius();
-                    if (distSq <= radius * radius) {
-                        return true;
+                    BlockPos jammerPos = jammer.getJammerPos();
+                    if (jammerPos != null) {
+                        double distSq = jammerPos.distSqr(pos);
+                        double radius = jammer.getEffectiveRadius();
+                        if (distSq <= radius * radius) {
+                            return true;
+                        }
                     }
                 }
             }

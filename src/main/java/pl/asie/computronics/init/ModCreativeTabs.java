@@ -33,6 +33,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.NETWORK_CARD_3.get());
                         output.accept(ModItems.PACKET_SNIFFER.get());
                         output.accept(ModItems.CARD_BOOM.get());
+                        output.accept(ModItems.RF_JAMMER_CARD.get());
                         output.accept(ModItems.CHAT_UPGRADE.get());
                         output.accept(ModItems.RADAR_UPGRADE.get());
                         output.accept(ModItems.CAMERA_UPGRADE.get());

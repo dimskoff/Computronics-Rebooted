@@ -40,6 +40,8 @@ public class ModItems {
             () -> new ItemPacketSniffer(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<ItemCardBoom> CARD_BOOM = ITEMS.register("card_boom",
             () -> new ItemCardBoom(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<ItemRFJammerCard> RF_JAMMER_CARD = ITEMS.register("rf_jammer_card",
+            () -> new ItemRFJammerCard(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     public static final DeferredItem<ItemChatUpgrade> CHAT_UPGRADE = ITEMS.register("chat_upgrade",
             () -> new ItemChatUpgrade(new Item.Properties()));

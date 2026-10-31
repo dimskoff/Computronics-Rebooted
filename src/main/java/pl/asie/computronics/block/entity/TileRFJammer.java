@@ -12,9 +12,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import pl.asie.computronics.init.ModBlockEntities;
+import pl.asie.computronics.network.IRFJammer;
 import pl.asie.computronics.network.RFJammerManager;
 
-public class TileRFJammer extends TileEntityComputronics {
+public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
     private int frequency = 0;       // 0 = broad spectrum
     private double power = 10.0;     // 1.0 to 100.0
     private boolean enabled = false;
@@ -25,6 +26,16 @@ public class TileRFJammer extends TileEntityComputronics {
                 .withComponent("rf_jammer", Visibility.Network)
                 .withConnector(1000)
                 .create();
+    }
+
+    @Override
+    public Level getJammerLevel() {
+        return level;
+    }
+
+    @Override
+    public BlockPos getJammerPos() {
+        return worldPosition;
     }
 
     private Connector connector() {

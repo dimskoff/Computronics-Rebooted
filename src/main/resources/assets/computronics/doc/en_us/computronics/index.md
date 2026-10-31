@@ -19,6 +19,7 @@ Welcome to **Computronics: Rebooted**, an expansion mod for **OpenComputers** on
 
 - [Tier 3 Network Card](item/network_card_3.md): High-throughput network card supporting 64 KB Jumbo Frames, 64 open ports, and MAC/source address spoofing.
 - [Packet Sniffer](item/packet_sniffer.md): Promiscuous TAP card to mirror network packets, analyze protocol traffic, and measure bandwidth.
+- [RF Signal Jammer Card](item/rf_jammer_card.md): Mobile radio transmitter card to disrupt and scramble wireless communication on the move.
 - [Self-Destruct Card](item/card_boom.md): Timed or immediate thermal detonation card.
 - [Drone Winch Upgrade](item/winch_upgrade.md): Deployable mechanical cable and winch hook for drones.
 - [Magnetic Tapes](item/tape.md): High-density storage media ranging from 128 KB to 1 MB.
