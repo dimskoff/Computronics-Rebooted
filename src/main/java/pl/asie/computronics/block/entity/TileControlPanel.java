@@ -149,25 +149,10 @@ public class TileControlPanel extends TileEntityComputronics {
     }
 
     public int[] calculateGridPos(Vec3 loc) {
-        Direction facing = getHorizontalFacing();
-
-        double lx = Math.max(0.0, Math.min(0.999, loc.x - worldPosition.getX()));
-        double lz = Math.max(0.0, Math.min(0.999, loc.z - worldPosition.getZ()));
-
-        double u;
-        double v;
-
-        switch (facing) {
-            case NORTH -> { u = lx; v = lz; }
-            case SOUTH -> { u = 1.0 - lx; v = 1.0 - lz; }
-            case WEST  -> { u = 1.0 - lz; v = lx; }
-            case EAST  -> { u = lz; v = 1.0 - lx; }
-            default    -> { u = lx; v = lz; }
+        if (level != null) {
+            return BlockControlPanel.calculateGrid(getBlockState(), worldPosition, loc);
         }
-
-        int gx = Math.max(0, Math.min(GRID_SIZE - 1, (int) (u * GRID_SIZE)));
-        int gy = Math.max(0, Math.min(GRID_SIZE - 1, (int) (v * GRID_SIZE)));
-        return new int[]{gx, gy};
+        return new int[]{0, 0};
     }
 
     public int[] calculateGridPos(BlockHitResult hit) {

@@ -22,13 +22,13 @@ import net.minecraft.world.level.BlockGetter;
 import pl.asie.computronics.block.entity.TileControlPanel;
 
 public class BlockControlPanel extends BlockComputronics {
-    // 8-voxel thick slab shapes
-    private static final VoxelShape SHAPE_FLOOR   = Block.box(0, 0, 0, 16, 8, 16);
-    private static final VoxelShape SHAPE_CEILING = Block.box(0, 8, 0, 16, 16, 16);
-    private static final VoxelShape SHAPE_WALL_N  = Block.box(0, 0, 8, 16, 16, 16);
-    private static final VoxelShape SHAPE_WALL_S  = Block.box(0, 0, 0, 16, 16, 8);
-    private static final VoxelShape SHAPE_WALL_W  = Block.box(8, 0, 0, 16, 16, 16);
-    private static final VoxelShape SHAPE_WALL_E  = Block.box(0, 0, 0, 8, 16, 16);
+    // 8-voxel thick slab shapes (offset away from the mounting surface)
+    private static final VoxelShape SHAPE_FLOOR   = Block.box(0, 8, 0, 16, 16, 16); // Top half (countertop height)
+    private static final VoxelShape SHAPE_CEILING = Block.box(0, 0, 0, 16, 8, 16);  // Bottom half
+    private static final VoxelShape SHAPE_WALL_N  = Block.box(0, 0, 0, 16, 16, 8);  // North side of block (away from south wall)
+    private static final VoxelShape SHAPE_WALL_S  = Block.box(0, 0, 8, 16, 16, 16); // South side of block (away from north wall)
+    private static final VoxelShape SHAPE_WALL_W  = Block.box(0, 0, 0, 8, 16, 16);  // West side of block (away from east wall)
+    private static final VoxelShape SHAPE_WALL_E  = Block.box(8, 0, 0, 16, 16, 16); // East side of block (away from west wall)
 
     public BlockControlPanel(Properties properties) {
         super(properties);

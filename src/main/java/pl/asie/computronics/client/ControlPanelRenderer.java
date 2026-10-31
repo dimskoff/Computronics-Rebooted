@@ -208,7 +208,7 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
     private static float[] mapCoord(AttachFace face, Direction facing, float u, float v, float h) {
         float x, y, z;
         if (face == AttachFace.FLOOR) {
-            y = 0.5f + h;
+            y = 1.0f + h;
             switch (facing) {
                 case NORTH -> { x = u; z = v; }
                 case SOUTH -> { x = 1.0f - u; z = 1.0f - v; }
@@ -217,7 +217,7 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                 default    -> { x = u; z = v; }
             }
         } else if (face == AttachFace.CEILING) {
-            y = 0.5f - h;
+            y = 0.0f - h;
             switch (facing) {
                 case NORTH -> { x = u; z = 1.0f - v; }
                 case SOUTH -> { x = 1.0f - u; z = v; }
@@ -228,11 +228,11 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         } else { // WALL
             y = 1.0f - v;
             switch (facing) {
-                case NORTH -> { z = 0.5f - h; x = u; }
-                case SOUTH -> { z = 0.5f + h; x = 1.0f - u; }
-                case WEST  -> { x = 0.5f - h; z = 1.0f - u; }
-                case EAST  -> { x = 0.5f + h; z = u; }
-                default    -> { z = 0.5f - h; x = u; }
+                case NORTH -> { z = 0.0f - h; x = u; }
+                case SOUTH -> { z = 1.0f + h; x = 1.0f - u; }
+                case WEST  -> { x = 0.0f - h; z = 1.0f - u; }
+                case EAST  -> { x = 1.0f + h; z = u; }
+                default    -> { z = 0.0f - h; x = u; }
             }
         }
         return new float[]{x, y, z};
@@ -246,10 +246,16 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         float[] p3 = mapCoord(face, facing, u2, v2, h);
         float[] p4 = mapCoord(face, facing, u1, v2, h);
 
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
+
+        // Reverse winding
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
     }
 
     private static void renderFaceQuadSide(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
@@ -260,9 +266,15 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         float[] p3 = mapCoord(face, facing, u2, v2, h2);
         float[] p4 = mapCoord(face, facing, u1, v1, h2);
 
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setColor(r, g, b, 255);
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
+
+        // Reverse winding
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
     }
 }
