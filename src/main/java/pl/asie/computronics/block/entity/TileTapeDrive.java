@@ -56,6 +56,7 @@ public class TileTapeDrive extends TileEntityComputronics {
         if (tapeStack.isEmpty()) {
             if (!held.isEmpty() && held.getItem() instanceof ItemTape) {
                 tapeStack = held.split(1);
+                level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_INSERT.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
                 setChanged();
                 return ItemInteractionResult.CONSUME;
             }
@@ -64,6 +65,7 @@ public class TileTapeDrive extends TileEntityComputronics {
                 player.setItemInHand(hand, tapeStack.copy());
                 tapeStack = ItemStack.EMPTY;
                 state = "STOPPED";
+                level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_EJECT.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
                 setChanged();
                 return ItemInteractionResult.SUCCESS;
             }
@@ -130,12 +132,14 @@ public class TileTapeDrive extends TileEntityComputronics {
     public Object[] play(Context context, Arguments args) {
         if (tapeStack.isEmpty()) return result(false, "no tape");
         this.state = "PLAYING";
+        if (level != null) level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_BUTTON.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
         return result(true);
     }
 
     @Callback(doc = "function():boolean -- Stops the tape.")
     public Object[] stop(Context context, Arguments args) {
         this.state = "STOPPED";
+        if (level != null) level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_BUTTON.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
         return result(true);
     }
 
@@ -145,6 +149,7 @@ public class TileTapeDrive extends TileEntityComputronics {
         if (storage == null) return result(false, "no tape");
         storage.setPosition(0);
         this.state = "STOPPED";
+        if (level != null) level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_REWIND.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
         return result(true);
     }
 

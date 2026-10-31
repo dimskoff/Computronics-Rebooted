@@ -24,6 +24,7 @@ public class Computronics {
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        pl.asie.computronics.init.ModSounds.SOUNDS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
 
