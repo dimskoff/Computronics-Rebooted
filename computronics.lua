@@ -139,6 +139,7 @@ local H = {
     panel        = component.isAvailable("control_panel") and component.control_panel or nil,
     beep         = component.isAvailable("beep") and component.beep or nil,
     fx           = component.isAvailable("particle_fx") and component.particle_fx or nil,
+    speech       = component.isAvailable("speech_box") and component.speech_box or nil,
 }
 
 local function rescanHardware()
@@ -159,6 +160,7 @@ local function rescanHardware()
     H.panel    = component.isAvailable("control_panel") and component.control_panel or nil
     H.beep     = component.isAvailable("beep") and component.beep or nil
     H.fx       = component.isAvailable("particle_fx") and component.particle_fx or nil
+    H.speech   = component.isAvailable("speech_box") and component.speech_box or nil
 
     if H.modem and not H.modem.isOpen(netPort) then
         pcall(function() H.modem.open(netPort) end)
@@ -769,15 +771,15 @@ local function renderChat()
     -- Message input field
     setColors(C.TEXT, C.PANEL_BG)
     gpu.set(5, 10, "Message:")
-    drawBox(14, 10, screenW - 36, 1, C.PANEL_ALT)
+    drawBox(14, 10, screenW - 46, 1, C.PANEL_ALT)
     setColors(C.TEXT, C.PANEL_ALT)
-    gpu.set(15, 10, unicode.sub(chatInputBuffer, 1, screenW - 38))
+    gpu.set(15, 10, unicode.sub(chatInputBuffer, 1, screenW - 48))
 
-    addButton("c_edit_msg", screenW - 20, 10, 8, 1, "[ EDIT ]", function()
+    addButton("c_edit_msg", screenW - 30, 10, 8, 1, "[ EDIT ]", function()
         chatInputBuffer = promptInput("Enter chat message", chatInputBuffer)
     end, C.BTN_BG, C.CYAN)
 
-    addButton("c_send_msg", screenW - 11, 10, 8, 1, "[ SEND ]", function()
+    addButton("c_send_msg", screenW - 21, 10, 8, 1, "[ SEND ]", function()
         if chatMode == "say" then
             pcall(H.chat.say, chatInputBuffer, chatDistance, chatPrefix)
             setStatus("Broadcasted chat: " .. chatInputBuffer)
@@ -787,6 +789,13 @@ local function renderChat()
         end
         table.insert(logs.chat, 1, os.date("%H:%M:%S") .. " [SENT] " .. chatInputBuffer)
     end, C.BTN_BG, C.GREEN)
+
+    if H.speech then
+        addButton("c_tts_speak", screenW - 12, 10, 10, 1, "[ 🗣 TTS ]", function()
+            pcall(H.speech.say, chatInputBuffer)
+            setStatus("Speech Box vocalized: " .. chatInputBuffer)
+        end, C.BTN_BG, C.YELLOW)
+    end
 
     -- Intercom Log Window
     drawBox(5, 12, screenW - 10, screenH - 14, C.PANEL_ALT)

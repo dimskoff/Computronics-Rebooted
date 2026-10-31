@@ -12,6 +12,7 @@
   "block.computronics.analog_gauge": "Analog Dial Gauge",
   "block.computronics.iron_noteblock": "Iron Note Block",
   "block.computronics.control_panel": "Modular Control Panel",
+  "block.computronics.speech_box": "Speech Box",
 
   "item.computronics.mini_lamp": "Miniature Indicator Lamp",
   "item.computronics.mini_button": "Tactile Push Button",
@@ -30,6 +31,8 @@
   "item.computronics.radar_upgrade": "Radar Upgrade",
   "item.computronics.camera_upgrade": "Camera Upgrade",
   "item.computronics.winch_upgrade": "Drone Winch Upgrade",
+  "item.computronics.speech_upgrade": "Speech Upgrade",
+  "tooltip.computronics.upgrade.speech": "Equips robots and drones with a voice synthesizer.",
   "item.computronics.tape_iron": "Magnetic Tape (Iron)",
   "item.computronics.tape_gold": "Magnetic Tape (Gold)",
   "item.computronics.tape_diamond": "Magnetic Tape (Diamond)",

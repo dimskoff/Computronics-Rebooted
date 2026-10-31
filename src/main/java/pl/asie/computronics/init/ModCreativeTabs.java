@@ -30,6 +30,7 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.ANALOG_GAUGE.get());
                         output.accept(ModBlocks.IRON_NOTEBLOCK.get());
                         output.accept(ModBlocks.CONTROL_PANEL.get());
+                        output.accept(ModBlocks.SPEECH_BOX.get());
 
                         // Items & Cards
                         output.accept(ModItems.MINI_LAMP.get());
@@ -41,6 +42,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CARD_BEEP.get());
                         output.accept(ModItems.CARD_FX.get());
                         output.accept(ModItems.CHAT_UPGRADE.get());
+                        output.accept(ModItems.SPEECH_UPGRADE.get());
                         output.accept(ModItems.RADAR_UPGRADE.get());
                         output.accept(ModItems.CAMERA_UPGRADE.get());
                         output.accept(ModItems.WINCH_UPGRADE.get());

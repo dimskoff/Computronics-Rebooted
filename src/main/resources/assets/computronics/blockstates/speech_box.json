@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "computronics:block/speech_box" },
+    "facing=south": { "model": "computronics:block/speech_box", "y": 180 },
+    "facing=west":  { "model": "computronics:block/speech_box", "y": 270 },
+    "facing=east":  { "model": "computronics:block/speech_box", "y": 90 }
+  }
+}

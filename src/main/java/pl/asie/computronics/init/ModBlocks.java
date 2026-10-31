@@ -51,4 +51,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<BlockControlPanel> CONTROL_PANEL =
             BLOCKS.register("control_panel", () -> new BlockControlPanel(metal()));
+
+    public static final DeferredBlock<BlockSpeechBox> SPEECH_BOX =
+            BLOCKS.register("speech_box", () -> new BlockSpeechBox(metal()));
 }

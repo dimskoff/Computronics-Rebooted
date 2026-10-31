@@ -19,6 +19,7 @@ public final class ComputronicsOCDrivers {
         Driver.add(new DriverItemCardBeep());
         Driver.add(new DriverItemCardFX());
         Driver.add(new DriverItemChatUpgrade());
+        Driver.add(new DriverItemSpeechUpgrade());
         Driver.add(new DriverItemRadarUpgrade());
         Driver.add(new DriverItemCameraUpgrade());
         Driver.add(new DriverItemWinchUpgrade());

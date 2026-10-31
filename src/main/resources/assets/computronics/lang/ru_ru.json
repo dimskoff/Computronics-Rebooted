@@ -12,6 +12,7 @@
   "block.computronics.analog_gauge": "Аналоговый стрелочный индикатор",
   "block.computronics.iron_noteblock": "Железный нотный блок",
   "block.computronics.control_panel": "Модульная панель управления",
+  "block.computronics.speech_box": "Голосовой блок (Speech Box)",
 
   "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
   "item.computronics.mini_button": "Тактильная кнопка управления",
@@ -30,6 +31,8 @@
   "item.computronics.radar_upgrade": "Улучшение 'Радар'",
   "item.computronics.camera_upgrade": "Улучшение 'Камера'",
   "item.computronics.winch_upgrade": "Улучшение 'Лебёдка дрона'",
+  "item.computronics.speech_upgrade": "Улучшение 'Синтез речи'",
+  "tooltip.computronics.upgrade.speech": "Оснащает роботов и дронов голосовым синтезатором речи.",
   "item.computronics.tape_iron": "Магнитная кассета (Железо)",
   "item.computronics.tape_gold": "Магнитная кассета (Золото)",
   "item.computronics.tape_diamond": "Магнитная кассета (Алмаз)",

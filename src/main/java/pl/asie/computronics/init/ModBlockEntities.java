@@ -46,4 +46,7 @@ public class ModBlockEntities {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileControlPanel>> CONTROL_PANEL =
             BLOCK_ENTITIES.register("control_panel", () -> BlockEntityType.Builder.of(TileControlPanel::new, ModBlocks.CONTROL_PANEL.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileSpeechBox>> SPEECH_BOX =
+            BLOCK_ENTITIES.register("speech_box", () -> BlockEntityType.Builder.of(TileSpeechBox::new, ModBlocks.SPEECH_BOX.get()).build(null));
 }

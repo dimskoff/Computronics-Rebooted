@@ -36,6 +36,8 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.IRON_NOTEBLOCK.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> CONTROL_PANEL = ITEMS.register("control_panel",
             () -> new BlockItem(ModBlocks.CONTROL_PANEL.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> SPEECH_BOX = ITEMS.register("speech_box",
+            () -> new BlockItem(ModBlocks.SPEECH_BOX.get(), new Item.Properties()));
 
     // Control Panel Modular Elements
     public static final DeferredItem<ItemMiniLamp> MINI_LAMP = ITEMS.register("mini_lamp",
@@ -65,6 +67,8 @@ public class ModItems {
             () -> new ItemCameraUpgrade(new Item.Properties()));
     public static final DeferredItem<ItemWinchUpgrade> WINCH_UPGRADE = ITEMS.register("winch_upgrade",
             () -> new ItemWinchUpgrade(new Item.Properties()));
+    public static final DeferredItem<ItemSpeechUpgrade> SPEECH_UPGRADE = ITEMS.register("speech_upgrade",
+            () -> new ItemSpeechUpgrade(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     // Cassette Tapes
     public static final DeferredItem<ItemTape> TAPE_IRON = ITEMS.register("tape_iron",
