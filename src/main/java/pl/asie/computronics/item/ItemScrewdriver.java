@@ -1,6 +1,7 @@
 package pl.asie.computronics.item;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -14,6 +15,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import pl.asie.computronics.block.entity.TileControlPanel;
 
 import java.util.List;
@@ -38,57 +40,43 @@ public class ItemScrewdriver extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
-        BlockEntity be = level.getBlockEntity(context.getClickedPos());
-        if (be instanceof TileControlPanel panel) {
-            Player player = context.getPlayer();
-            if (player == null) return InteractionResult.PASS;
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        if (state.getBlock() instanceof pl.asie.computronics.block.BlockControlPanel) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileControlPanel panel) {
+                Player player = context.getPlayer();
+                if (player == null) return InteractionResult.PASS;
 
-            int[] grid = panel.calculateGridPos(context.getClickLocation());
-            if (grid == null) return InteractionResult.PASS;
+                int[] grid = pl.asie.computronics.block.BlockControlPanel.calculateGrid(state, pos, context.getClickLocation());
+                if (grid == null) return InteractionResult.PASS;
 
-            int gx = grid[0];
-            int gy = grid[1];
-            TileControlPanel.PanelElement elem = panel.findRootElement(gx, gy);
-            if (elem == null || elem.type == TileControlPanel.ElementType.NONE) {
-                if (!level.isClientSide) {
-                    player.displayClientMessage(Component.literal("§7[Screwdriver] No component at clicked position.").withStyle(ChatFormatting.GRAY), true);
+                int gx = grid[0];
+                int gy = grid[1];
+                TileControlPanel.PanelElement elem = panel.findRootElement(gx, gy);
+                if (elem == null || elem.type == TileControlPanel.ElementType.NONE) {
+                    if (!level.isClientSide) {
+                        player.displayClientMessage(Component.literal("§7[Screwdriver] No component at clicked position.").withStyle(ChatFormatting.GRAY), true);
+                    }
+                    return InteractionResult.sidedSuccess(level.isClientSide);
+                }
+
+                if (player.isShiftKeyDown()) {
+                    if (!level.isClientSide) {
+                        // Shift+Click: Cycle size 1 -> 2 -> 3 -> 4 -> 1
+                        int newSize = (elem.size % 4) + 1;
+                        panel.resizeElement(elem, newSize);
+                        level.playSound(null, pos, SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.BLOCKS, 0.8f, 1.2f + (newSize * 0.1f));
+                        player.displayClientMessage(Component.literal(String.format("§e[Screwdriver] §fResized component to §b%dx%d", newSize, newSize)), true);
+                    }
+                } else {
+                    // Regular Right-Click opens the interactive GUI!
+                    if (level.isClientSide) {
+                        pl.asie.computronics.client.gui.ControlPanelConfigScreen.open(panel, elem.slot);
+                    }
                 }
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
-
-            if (!level.isClientSide) {
-                if (player.isShiftKeyDown()) {
-                    // Shift+Click: Cycle size 1 -> 2 -> 3 -> 4 -> 1
-                    int newSize = (elem.size % 4) + 1;
-                    panel.resizeElement(elem, newSize);
-                    level.playSound(null, context.getClickedPos(), SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.BLOCKS, 0.8f, 1.2f + (newSize * 0.1f));
-                    player.displayClientMessage(Component.literal(String.format("§e[Screwdriver] §fResized component to §b%dx%d", newSize, newSize)), true);
-                } else {
-                    // Check if offhand has a Name Tag to apply custom label
-                    ItemStack offhand = player.getOffhandItem();
-                    if (!offhand.isEmpty() && offhand.getItem() == Items.NAME_TAG && offhand.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME)) {
-                        String label = offhand.getHoverName().getString();
-                        elem.label = label;
-                        panel.markChangedAndSync();
-                        level.playSound(null, context.getClickedPos(), SoundEvents.VILLAGER_WORK_CARTOGRAPHER, SoundSource.BLOCKS, 0.8f, 1.3f);
-                        player.displayClientMessage(Component.literal("§a[Screwdriver] §fApplied label: §6\"" + label + "\""), true);
-                    } else {
-                        // Normal Click: Cycle color preset
-                        int nextColor = PRESET_COLORS[0];
-                        for (int i = 0; i < PRESET_COLORS.length; i++) {
-                            if (PRESET_COLORS[i] == elem.color) {
-                                nextColor = PRESET_COLORS[(i + 1) % PRESET_COLORS.length];
-                                break;
-                            }
-                        }
-                        elem.color = nextColor;
-                        panel.markChangedAndSync();
-                        level.playSound(null, context.getClickedPos(), SoundEvents.SPYGLASS_USE, SoundSource.BLOCKS, 0.7f, 1.4f);
-                        player.displayClientMessage(Component.literal(String.format("§a[Screwdriver] §fChanged color to §b#%06X", nextColor)), true);
-                    }
-                }
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide);
         }
         return super.useOn(context);
     }

@@ -36,6 +36,7 @@ public class Computronics {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::enqueueIMC);
+        modEventBus.addListener(pl.asie.computronics.network.NetworkHandler::register);
 
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(pl.asie.computronics.client.ComputronicsClient::onClientSetup);
@@ -44,6 +45,13 @@ public class Computronics {
 
         // Register game event listeners
         NeoForge.EVENT_BUS.register(TileChatBox.ChatEventHandler.INSTANCE);
+        NeoForge.EVENT_BUS.addListener(this::serverStarting);
+    }
+
+    private void serverStarting(final net.neoforged.neoforge.event.server.ServerStartingEvent event) {
+        java.nio.file.Path worldDir = event.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT);
+        pl.asie.computronics.tape.TapeStorage.setStorageDirectory(worldDir.resolve("computronics").resolve("tapes"));
+        LOGGER.info("Computronics: Tape storage directory initialized at {}", worldDir.resolve("computronics").resolve("tapes"));
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

@@ -29,6 +29,9 @@
 
   "item.computronics.mini_lamp": "Miniature Indicator Lamp",
   "item.computronics.mini_button": "Tactile Push Button",
+  "item.computronics.seven_segment": "7-Segment Digital Display",
+  "tooltip.computronics.seven_segment.desc1": "Mountable multi-digit seven-segment glowing LED display for control panels.",
+  "tooltip.computronics.seven_segment.desc2": "Configurable via Screwdriver GUI or OpenComputers setSegment API.",
   "item.computronics.card_beep": "Audio Beep Card",
   "item.computronics.card_fx": "Particle FX Card",
   "tooltip.computronics.card_beep.desc": "Generates multi-frequency square-wave synthesizer tones.",

@@ -2,114 +2,104 @@ package pl.asie.computronics.item;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.phys.Vec3;
 import pl.asie.computronics.block.BlockControlPanel;
 import pl.asie.computronics.block.entity.TileControlPanel;
-import pl.asie.computronics.init.ModBlocks;
 
 import java.util.List;
 
 public class ItemMiniButton extends Item {
+
     public ItemMiniButton(Properties properties) {
         super(properties);
+    }
+
+    public static int getPlacementSize(ItemStack stack) {
+        CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        if (cd != null && cd.contains("size")) {
+            return Math.max(1, Math.min(4, cd.copyTag().getInt("size")));
+        }
+        return 1;
+    }
+
+    public static void setPlacementSize(ItemStack stack, int size) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
+            tag.putInt("size", Math.max(1, Math.min(4, size)));
+        });
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (player.isShiftKeyDown()) {
+            int current = getPlacementSize(stack);
+            int next = (current == 1) ? 2 : (current == 2 ? 3 : (current == 3 ? 4 : 1));
+            setPlacementSize(stack, next);
+            if (level.isClientSide()) {
+                player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
+            } else {
+                player.displayClientMessage(Component.literal(String.format("§e[Mini Button] §fPlacement size: §6%dx%d", next, next)), true);
+            }
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        }
+        return InteractionResultHolder.pass(stack);
     }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
-        Direction face = context.getClickedFace();
+        BlockState state = level.getBlockState(pos);
         Player player = context.getPlayer();
         ItemStack stack = context.getItemInHand();
 
-        BlockState state = level.getBlockState(pos);
-
-        // Case 1: Clicked directly on an existing Control Panel face
         if (state.getBlock() instanceof BlockControlPanel) {
-            Direction panelFacing = state.hasProperty(BlockStateProperties.FACING)
-                    ? state.getValue(BlockStateProperties.FACING)
-                    : (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING) ? state.getValue(BlockStateProperties.HORIZONTAL_FACING) : Direction.NORTH);
-            if (face == panelFacing) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof TileControlPanel panel) {
-                    Vec3 hit = context.getClickLocation().subtract(Vec3.atLowerCornerOf(pos));
-                    int[] grid = ItemMiniLamp.calculateGrid(hit, face);
-                    if (grid != null) {
-                        if (!level.isClientSide()) {
-                            if (panel.mountElementAt(grid[0], grid[1], TileControlPanel.ElementType.BUTTON, 0xFF0000)) {
-                                if (player != null && !player.isCreative()) {
-                                    stack.shrink(1);
-                                }
-                                level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 1.0f, 1.2f);
-                                if (player != null) {
-                                    player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted Mini Button at (%d, %d)", grid[0], grid[1])), true);
-                                }
-                            } else {
-                                if (player != null) {
-                                    player.displayClientMessage(Component.literal("§c[Control Panel] Slot already occupied!"), true);
-                                }
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof TileControlPanel panel) {
+                int[] grid = BlockControlPanel.calculateGrid(state, pos, context.getClickLocation());
+                if (grid != null) {
+                    if (!level.isClientSide()) {
+                        int size = getPlacementSize(stack);
+                        if (panel.mountElementWithSize(grid[0], grid[1], TileControlPanel.ElementType.BUTTON, 0xCC2020, size)) {
+                            if (player != null && !player.isCreative()) {
+                                stack.shrink(1);
+                            }
+                            level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.2f);
+                            if (player != null) {
+                                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fMounted %dx%d Tactile Button at (%d, %d)", size, size, grid[0], grid[1])), true);
+                            }
+                        } else {
+                            if (player != null) {
+                                player.displayClientMessage(Component.literal("§c[Control Panel] Cannot fit element here (overlap or out of bounds)!"), true);
                             }
                         }
-                        return InteractionResult.sidedSuccess(level.isClientSide());
                     }
+                    return InteractionResult.sidedSuccess(level.isClientSide());
                 }
             }
         }
-
-        // Case 2: Clicked on a solid wall/surface -> attach/create a modular panel with the button mounted!
-        BlockPos placePos = pos.relative(face);
-        BlockPlaceContext placeContext = new BlockPlaceContext(context);
-        if (level.getBlockState(placePos).canBeReplaced(placeContext)) {
-            if (!level.isClientSide()) {
-                BlockState newState = ModBlocks.CONTROL_PANEL.get().defaultBlockState();
-                if (newState.hasProperty(BlockStateProperties.FACING)) {
-                    newState = newState.setValue(BlockStateProperties.FACING, face);
-                } else if (newState.hasProperty(BlockStateProperties.HORIZONTAL_FACING) && face.getAxis().isHorizontal()) {
-                    newState = newState.setValue(BlockStateProperties.HORIZONTAL_FACING, face);
-                }
-                level.setBlock(placePos, newState, 3);
-
-                BlockEntity be = level.getBlockEntity(placePos);
-                if (be instanceof TileControlPanel panel) {
-                    Vec3 hit = context.getClickLocation().subtract(Vec3.atLowerCornerOf(pos));
-                    int[] grid = ItemMiniLamp.calculateGrid(hit, face);
-                    int gx = grid != null ? grid[0] : 3;
-                    int gy = grid != null ? grid[1] : 3;
-
-                    panel.mountElementAt(gx, gy, TileControlPanel.ElementType.BUTTON, 0xFF0000);
-                    if (player != null && !player.isCreative()) {
-                        stack.shrink(1);
-                    }
-                    level.playSound(null, placePos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.0f);
-                    if (player != null) {
-                        player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fAttached Panel & Mounted Button at (%d, %d)", gx, gy)), true);
-                    }
-                }
-            }
-            return InteractionResult.sidedSuccess(level.isClientSide());
-        }
-
         return InteractionResult.PASS;
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
+        int size = getPlacementSize(stack);
         tooltip.add(Component.translatable("tooltip.computronics.mini_button.desc").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal("Placement Size: " + size + "x" + size + " (Sneak+R-Click to change)").withStyle(ChatFormatting.GOLD));
     }
 }

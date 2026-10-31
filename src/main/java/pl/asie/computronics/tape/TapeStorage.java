@@ -80,9 +80,14 @@ public class TapeStorage {
         return toWrite;
     }
 
+    private static Path getDirectory() {
+        if (storageDirectory != null) return storageDirectory;
+        return Path.of("computronics", "tapes");
+    }
+
     private void load() {
-        if (storageDirectory == null) return;
-        Path file = storageDirectory.resolve("tape_" + id + ".bin");
+        Path dir = getDirectory();
+        Path file = dir.resolve("tape_" + id + ".bin");
         if (Files.exists(file)) {
             try {
                 byte[] loaded = Files.readAllBytes(file);
@@ -95,10 +100,11 @@ public class TapeStorage {
     }
 
     public synchronized void save() {
-        if (storageDirectory == null || !dirty) return;
+        if (!dirty) return;
+        Path dir = getDirectory();
         try {
-            Files.createDirectories(storageDirectory);
-            Path file = storageDirectory.resolve("tape_" + id + ".bin");
+            Files.createDirectories(dir);
+            Path file = dir.resolve("tape_" + id + ".bin");
             Files.write(file, data);
             dirty = false;
         } catch (IOException e) {

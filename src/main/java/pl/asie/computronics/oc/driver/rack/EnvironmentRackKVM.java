@@ -9,6 +9,7 @@ import li.cil.oc.api.machine.Context;
 import li.cil.oc.api.network.EnvironmentHost;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.ComponentConnectableRackMountableEnvironment;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvents;
@@ -45,12 +46,51 @@ public class EnvironmentRackKVM extends ComponentConnectableRackMountableEnviron
         return new Object[]{selectedServer};
     }
 
+    private Direction lastConfiguredSide = null;
+
+    private void updateRackRouting(Rack rack) {
+        if (!(rack instanceof li.cil.oc.common.blockentity.Rack rackEntity)) return;
+
+        try {
+            li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction>[][] mapping = rackEntity.nodeMapping();
+            Direction targetSide = lastConfiguredSide;
+            for (int s = 0; s < 4; s++) {
+                for (int b = 0; b < 3; b++) {
+                    li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction> opt = mapping[s][b];
+                    if (opt != null && opt.isDefined()) {
+                        targetSide = opt.get();
+                        break;
+                    }
+                }
+                if (targetSide != null) break;
+            }
+
+            if (targetSide == null) {
+                targetSide = net.minecraft.core.Direction.WEST;
+            }
+            lastConfiguredSide = targetSide;
+
+            for (int s = 0; s < 4; s++) {
+                boolean active = (s == selectedServer);
+                li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction> opt = active
+                        ? li.cil.oc.internal.scalalib.Option$.MODULE$.apply(targetSide)
+                        : li.cil.oc.internal.scalalib.Option$.MODULE$.empty();
+                for (int b = 0; b < 3; b++) {
+                    rackEntity.connect(s, b, opt);
+                }
+            }
+        } catch (Throwable t) {
+            pl.asie.computronics.Computronics.LOGGER.warn("Rack KVM routing update failed: {}", t.getMessage());
+        }
+    }
+
     @Callback(doc = "function(slot:number):boolean -- Routes KVM focus to the server at slot (0-3).")
     public Object[] setSelectedServer(Context context, Arguments args) {
         int slot = args.checkInteger(0);
         if (slot >= 0 && slot < 4) {
             this.selectedServer = slot;
             if (host instanceof Rack rack) {
+                updateRackRouting(rack);
                 rack.markChanged(rack.indexOfMountable(this));
             }
             if (node() != null) {
@@ -70,15 +110,18 @@ public class EnvironmentRackKVM extends ComponentConnectableRackMountableEnviron
     public boolean onActivate(Player player, InteractionHand hand, ItemStack stack, float hitX, float hitY) {
         if (!player.level().isClientSide()) {
             selectedServer = (selectedServer + 1) % 4;
+            if (host instanceof Rack rack) {
+                updateRackRouting(rack);
+                rack.markChanged(rack.indexOfMountable(this));
+            }
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.7f, 1.2f + (selectedServer * 0.1f));
 
+            String sideName = lastConfiguredSide != null ? lastConfiguredSide.name() : "SIDE";
             player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                    String.format("§b[Rack KVM] §fRouted peripheral focus to §aServer Channel #%d (Slot %d)", selectedServer + 1, selectedServer)), true);
+                    String.format("§b[Rack KVM] §fRouted peripheral bus to §aServer Channel #%d (Slot %d) §7-> [%s]",
+                            selectedServer + 1, selectedServer, sideName)), true);
 
-            if (host instanceof Rack rack) {
-                rack.markChanged(rack.indexOfMountable(this));
-            }
             if (node() != null) {
                 node().sendToReachable("computer.signal", "rack_kvm_switch", selectedServer);
             }

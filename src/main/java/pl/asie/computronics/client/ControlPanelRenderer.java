@@ -2,62 +2,56 @@ package pl.asie.computronics.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.AttachFace;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.joml.Matrix4f;
 import pl.asie.computronics.block.entity.TileControlPanel;
 
 public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPanel> {
+
+    // 7-segment bitmasks for characters 0-9, A-F, minus, blank
+    // Bits: 0=a(top), 1=b(top-right), 2=c(bot-right), 3=d(bot), 4=e(bot-left), 5=f(top-left), 6=g(middle)
+    private static final byte[] SEG_DIGITS = {
+            0x3F, // 0
+            0x06, // 1
+            0x5B, // 2
+            0x4F, // 3
+            0x66, // 4
+            0x6D, // 5
+            0x7D, // 6
+            0x07, // 7
+            0x7F, // 8
+            0x6F, // 9
+            0x77, // A
+            0x7C, // b
+            0x39, // C
+            0x5E, // d
+            0x79, // E
+            0x71  // F
+    };
+
     public ControlPanelRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
     public void render(TileControlPanel panel, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        Direction facing = panel.getHorizontalFacing();
-        boolean isTop = panel.isTopHalf();
+        BlockState state = panel.getBlockState();
+        if (!state.hasProperty(BlockStateProperties.ATTACH_FACE) || !state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+            return;
+        }
+
+        AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 
         poseStack.pushPose();
         Matrix4f pose = poseStack.last().pose();
-
         VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.FONT_QUAD);
-
-        // Slab surface normal
-        float nx = 0, ny = isTop ? -1.0f : 1.0f, nz = 0;
-        float tx = 0, ty = 0, tz = 0; // along u / gx
-        float bx = 0, by = 0, bz = 0; // along v / gy
-        float baseOffsetX = 0, baseOffsetY = 0.5f, baseOffsetZ = 0;
-
-        switch (facing) {
-            case NORTH -> {
-                tx = 1; tz = 0;
-                bx = 0; bz = 1;
-                baseOffsetX = 0; baseOffsetZ = 0;
-            }
-            case SOUTH -> {
-                tx = -1; tz = 0;
-                bx = 0; bz = -1;
-                baseOffsetX = 1.0f; baseOffsetZ = 1.0f;
-            }
-            case WEST -> {
-                tx = 0; tz = -1;
-                bx = 1; bz = 0;
-                baseOffsetX = 1.0f; baseOffsetZ = 0;
-            }
-            case EAST -> {
-                tx = 0; tz = 1;
-                bx = -1; bz = 0;
-                baseOffsetX = 0; baseOffsetZ = 1.0f;
-            }
-            default -> {
-                tx = 1; tz = 0;
-                bx = 0; bz = 1;
-            }
-        }
-
         Font font = Minecraft.getInstance().font;
 
         for (int slot = 0; slot < TileControlPanel.TOTAL_SLOTS; slot++) {
@@ -68,179 +62,207 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
             int gy = slot / TileControlPanel.GRID_SIZE;
             int size = Math.max(1, Math.min(4, elem.size));
 
-            float u = (gx + size * 0.5f) / 8.0f;
-            float v = (gy + size * 0.5f) / 8.0f;
+            float u1 = gx / 8.0f;
+            float v1 = gy / 8.0f;
+            float u2 = (gx + size) / 8.0f;
+            float v2 = (gy + size) / 8.0f;
 
-            float cx = baseOffsetX + u * tx + v * bx;
-            float cy = baseOffsetY + (isTop ? -0.001f : 0.001f);
-            float cz = baseOffsetZ + u * tz + v * bz;
-
-            float halfSpan = (size / 8.0f) * 0.5f;
-            float baseSize = halfSpan - 0.008f;
-            float capSize = halfSpan - 0.016f;
+            float pad = 0.012f;
+            float cu1 = u1 + pad;
+            float cv1 = v1 + pad;
+            float cu2 = u2 - pad;
+            float cv2 = v2 - pad;
 
             if (elem.type == TileControlPanel.ElementType.BUTTON) {
-                // 1. SMD Baseplate
-                renderBox(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                        baseSize, baseSize, 0.001f, 0.006f, 38, 42, 48);
+                // Baseplate
+                renderSurfaceBox(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.001f, 0.006f, 38, 42, 48);
 
-                // 2. Tactile Button Cap (Depresses down on click for 250ms then pops up)
+                // Button cap (depresses down on click for 250ms)
                 boolean pressed = (System.currentTimeMillis() - elem.lastPressTime) < 250;
                 float h1 = 0.006f;
-                float h2 = pressed ? 0.014f : 0.042f;
+                float h2 = pressed ? 0.014f : 0.038f;
 
                 int br = (elem.color >> 16) & 0xFF;
                 int bg = (elem.color >> 8) & 0xFF;
                 int bb = elem.color & 0xFF;
 
-                renderBox(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                        capSize, capSize, h1, h2, br, bg, bb);
+                float capPad = 0.008f;
+                renderSurfaceBox(pose, vc, face, facing, cu1 + capPad, cv1 + capPad, cu2 - capPad, cv2 - capPad,
+                        h1, h2, br, bg, bb);
 
-                // Button Bevel / Highlight Pip
-                if (elem.label == null || elem.label.isEmpty()) {
-                    float pipSize = Math.max(0.012f, capSize * 0.35f);
-                    renderQuadAt(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                            pipSize, pipSize, h2 + 0.001f,
-                            Math.min(255, br + 50), Math.min(255, bg + 50), Math.min(255, bb + 50));
-                } else {
-                    // Render 3D Label text on the button cap
-                    poseStack.pushPose();
-                    poseStack.translate(cx, cy + (h2 + 0.002f) * ny, cz);
-
-                    // Align text with panel facing
-                    switch (facing) {
-                        case NORTH -> poseStack.mulPose(Axis.YP.rotationDegrees(180));
-                        case SOUTH -> {}
-                        case WEST -> poseStack.mulPose(Axis.YP.rotationDegrees(90));
-                        case EAST -> poseStack.mulPose(Axis.YP.rotationDegrees(270));
-                        default -> {}
-                    }
-                    if (isTop) {
-                        poseStack.mulPose(Axis.ZP.rotationDegrees(180));
-                    }
-                    poseStack.mulPose(Axis.XP.rotationDegrees(90));
-
-                    float textScale = (size * 0.0055f);
-                    poseStack.scale(textScale, textScale, textScale);
-                    int textW = font.width(elem.label);
-                    font.drawInBatch(elem.label, -textW / 2.0f, -4.0f, elem.textColor, false,
-                            poseStack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
-                    poseStack.popPose();
-                }
+                // Top highlight / bevel
+                renderFaceQuad(pose, vc, face, facing, cu1 + capPad + 0.006f, cv1 + capPad + 0.006f,
+                        cu2 - capPad - 0.006f, cv2 - capPad - 0.006f, h2 + 0.001f,
+                        Math.min(255, br + 45), Math.min(255, bg + 45), Math.min(255, bb + 45));
 
             } else if (elem.type == TileControlPanel.ElementType.LAMP) {
-                // 1. Chrome Bezel Ring
-                renderBox(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                        baseSize, baseSize, 0.001f, 0.006f, 50, 56, 64);
+                // Sleek, flat indicator lamp (not bulky/bulging)
+                // 1. Flush Chrome Rim
+                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.002f, 50, 56, 64);
 
-                // 2. 3D Glowing LED Dome
-                float h1 = 0.006f;
-                float h2 = 0.030f;
-
+                // 2. Flat glowing indicator lens (only 0.005f high, perfectly low-profile!)
+                float lensPad = 0.008f;
                 int col = elem.active ? elem.color : 0x18201A;
                 int r = (col >> 16) & 0xFF;
                 int g = (col >> 8) & 0xFF;
                 int b = col & 0xFF;
 
-                renderBox(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                        capSize, capSize, h1, h2, r, g, b);
+                renderFaceQuad(pose, vc, face, facing, cu1 + lensPad, cv1 + lensPad, cu2 - lensPad, cv2 - lensPad,
+                        0.005f, r, g, b);
 
                 if (elem.active) {
-                    float coreSize = capSize * 0.5f;
-                    renderQuadAt(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                            coreSize, coreSize, h2 + 0.001f,
-                            Math.min(255, r + 90), Math.min(255, g + 90), Math.min(255, b + 90));
+                    float corePad = lensPad + (size * 0.015f);
+                    renderFaceQuad(pose, vc, face, facing, cu1 + corePad, cv1 + corePad, cu2 - corePad, cv2 - corePad,
+                            0.006f, Math.min(255, r + 90), Math.min(255, g + 90), Math.min(255, b + 90));
                 }
+
+            } else if (elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
+                // Digital Seven-Segment Display Panel
+                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.003f, 15, 18, 22);
+                renderFaceQuad(pose, vc, face, facing, cu1 + 0.004f, cv1 + 0.004f, cu2 - 0.004f, cv2 - 0.004f,
+                        0.004f, 5, 8, 12);
+
+                String text = elem.displayValue != null && !elem.displayValue.isEmpty() ? elem.displayValue : "0";
+                renderSevenSegmentDigits(pose, vc, face, facing, cu1 + 0.008f, cv1 + 0.008f, cu2 - 0.008f, cv2 - 0.008f,
+                        0.007f, text, elem.color, elem.active);
             }
         }
 
         poseStack.popPose();
     }
 
-    private static void renderBox(Matrix4f pose, VertexConsumer vc,
-                                  float cx, float cy, float cz,
-                                  float nx, float ny, float nz,
-                                  float tx, float ty, float tz,
-                                  float bx, float by, float bz,
-                                  float su, float sv, float h1, float h2,
-                                  int r, int g, int b) {
-        renderQuadAt(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz, su, sv, h2, r, g, b);
-        renderSideQuad(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                su, -sv, su, sv, h1, h2, (int)(r * 0.85), (int)(g * 0.85), (int)(b * 0.85));
-        renderSideQuad(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                -su, sv, -su, -sv, h1, h2, (int)(r * 0.80), (int)(g * 0.80), (int)(b * 0.80));
-        renderSideQuad(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                su, sv, -su, sv, h1, h2, (int)(r * 0.90), (int)(g * 0.90), (int)(b * 0.90));
-        renderSideQuad(pose, vc, cx, cy, cz, nx, ny, nz, tx, ty, tz, bx, by, bz,
-                -su, -sv, su, -sv, h1, h2, (int)(r * 0.75), (int)(g * 0.75), (int)(b * 0.75));
+    private static void renderSevenSegmentDigits(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
+                                                float u1, float v1, float u2, float v2, float h,
+                                                String text, int color, boolean active) {
+        int digits = Math.min(4, Math.max(1, text.length()));
+        float totalW = u2 - u1;
+        float digitW = totalW / digits;
+        float digitH = v2 - v1;
+
+        int lr = (color >> 16) & 0xFF;
+        int lg = (color >> 8) & 0xFF;
+        int lb = color & 0xFF;
+
+        int offR = (lr >> 2);
+        int offG = (lg >> 2);
+        int offB = (lb >> 2);
+
+        for (int d = 0; d < digits; d++) {
+            char ch = text.charAt(d);
+            byte mask = getSegmentMask(ch);
+
+            float du1 = u1 + d * digitW + 0.004f;
+            float du2 = du1 + digitW - 0.008f;
+            float dv1 = v1 + 0.004f;
+            float dv2 = dv1 + digitH - 0.008f;
+
+            float midY = (dv1 + dv2) * 0.5f;
+            float th = (dv2 - dv1) * 0.12f; // segment thickness
+
+            // Segment a: Top horizontal
+            drawSeg(pose, vc, face, facing, du1 + th, dv1, du2 - th, dv1 + th, h, active && (mask & 1) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment b: Top-right vertical
+            drawSeg(pose, vc, face, facing, du2 - th, dv1 + th, du2, midY - th * 0.5f, h, active && (mask & 2) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment c: Bottom-right vertical
+            drawSeg(pose, vc, face, facing, du2 - th, midY + th * 0.5f, du2, dv2 - th, h, active && (mask & 4) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment d: Bottom horizontal
+            drawSeg(pose, vc, face, facing, du1 + th, dv2 - th, du2 - th, dv2, h, active && (mask & 8) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment e: Bottom-left vertical
+            drawSeg(pose, vc, face, facing, du1, midY + th * 0.5f, du1 + th, dv2 - th, h, active && (mask & 16) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment f: Top-left vertical
+            drawSeg(pose, vc, face, facing, du1, dv1 + th, du1 + th, midY - th * 0.5f, h, active && (mask & 32) != 0, lr, lg, lb, offR, offG, offB);
+            // Segment g: Middle horizontal
+            drawSeg(pose, vc, face, facing, du1 + th, midY - th * 0.5f, du2 - th, midY + th * 0.5f, h, active && (mask & 64) != 0, lr, lg, lb, offR, offG, offB);
+        }
     }
 
-    private static void renderQuadAt(Matrix4f pose, VertexConsumer vc,
-                                     float cx, float cy, float cz,
-                                     float nx, float ny, float nz,
-                                     float tx, float ty, float tz,
-                                     float bx, float by, float bz,
-                                     float su, float sv, float h,
-                                     int r, int g, int b) {
-        float x1 = cx + h * nx - su * tx - sv * bx;
-        float y1 = cy + h * ny - su * ty - sv * by;
-        float z1 = cz + h * nz - su * tz - sv * bz;
-
-        float x2 = cx + h * nx + su * tx - sv * bx;
-        float y2 = cy + h * ny + su * ty - sv * by;
-        float z2 = cz + h * nz + su * tz - sv * bz;
-
-        float x3 = cx + h * nx + su * tx + sv * bx;
-        float y3 = cy + h * ny + su * ty + sv * by;
-        float z3 = cz + h * nz + su * tz + sv * bz;
-
-        float x4 = cx + h * nx - su * tx + sv * bx;
-        float y4 = cy + h * ny - su * ty + sv * by;
-        float z4 = cz + h * nz - su * tz + sv * bz;
-
-        addDoubleSidedQuad(pose, vc, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, r, g, b, 255);
+    private static void drawSeg(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
+                                float u1, float v1, float u2, float v2, float h,
+                                boolean on, int onR, int onG, int onB, int offR, int offG, int offB) {
+        int r = on ? onR : offR;
+        int g = on ? onG : offG;
+        int b = on ? onB : offB;
+        renderFaceQuad(pose, vc, face, facing, u1, v1, u2, v2, h, r, g, b);
     }
 
-    private static void renderSideQuad(Matrix4f pose, VertexConsumer vc,
-                                       float cx, float cy, float cz,
-                                       float nx, float ny, float nz,
-                                       float tx, float ty, float tz,
-                                       float bx, float by, float bz,
-                                       float u1, float v1, float u2, float v2, float h1, float h2,
+    private static byte getSegmentMask(char ch) {
+        ch = Character.toUpperCase(ch);
+        if (ch >= '0' && ch <= '9') return SEG_DIGITS[ch - '0'];
+        if (ch >= 'A' && ch <= 'F') return SEG_DIGITS[10 + (ch - 'A')];
+        if (ch == '-') return 0x40;
+        return 0x00;
+    }
+
+    private static void renderSurfaceBox(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
+                                         float u1, float v1, float u2, float v2,
+                                         float h1, float h2, int r, int g, int b) {
+        // Top cap
+        renderFaceQuad(pose, vc, face, facing, u1, v1, u2, v2, h2, r, g, b);
+        // Sides
+        renderFaceQuadSide(pose, vc, face, facing, u1, v1, u2, v1, h1, h2, (int)(r * 0.85), (int)(g * 0.85), (int)(b * 0.85));
+        renderFaceQuadSide(pose, vc, face, facing, u1, v2, u2, v2, h1, h2, (int)(r * 0.80), (int)(g * 0.80), (int)(b * 0.80));
+        renderFaceQuadSide(pose, vc, face, facing, u1, v1, u1, v2, h1, h2, (int)(r * 0.90), (int)(g * 0.90), (int)(b * 0.90));
+        renderFaceQuadSide(pose, vc, face, facing, u2, v1, u2, v2, h1, h2, (int)(r * 0.75), (int)(g * 0.75), (int)(b * 0.75));
+    }
+
+    private static float[] mapCoord(AttachFace face, Direction facing, float u, float v, float h) {
+        float x, y, z;
+        if (face == AttachFace.FLOOR) {
+            y = 0.5f + h;
+            switch (facing) {
+                case NORTH -> { x = u; z = v; }
+                case SOUTH -> { x = 1.0f - u; z = 1.0f - v; }
+                case WEST  -> { x = v; z = 1.0f - u; }
+                case EAST  -> { x = 1.0f - v; z = u; }
+                default    -> { x = u; z = v; }
+            }
+        } else if (face == AttachFace.CEILING) {
+            y = 0.5f - h;
+            switch (facing) {
+                case NORTH -> { x = u; z = 1.0f - v; }
+                case SOUTH -> { x = 1.0f - u; z = v; }
+                case WEST  -> { x = v; z = u; }
+                case EAST  -> { x = 1.0f - v; z = 1.0f - u; }
+                default    -> { x = u; z = 1.0f - v; }
+            }
+        } else { // WALL
+            y = 1.0f - v;
+            switch (facing) {
+                case NORTH -> { z = 0.5f - h; x = u; }
+                case SOUTH -> { z = 0.5f + h; x = 1.0f - u; }
+                case WEST  -> { x = 0.5f - h; z = 1.0f - u; }
+                case EAST  -> { x = 0.5f + h; z = u; }
+                default    -> { z = 0.5f - h; x = u; }
+            }
+        }
+        return new float[]{x, y, z};
+    }
+
+    private static void renderFaceQuad(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
+                                       float u1, float v1, float u2, float v2, float h,
                                        int r, int g, int b) {
-        float x1 = cx + h1 * nx + u1 * tx + v1 * bx;
-        float y1 = cy + h1 * ny + u1 * ty + v1 * by;
-        float z1 = cz + h1 * nz + u1 * tz + v1 * bz;
+        float[] p1 = mapCoord(face, facing, u1, v1, h);
+        float[] p2 = mapCoord(face, facing, u2, v1, h);
+        float[] p3 = mapCoord(face, facing, u2, v2, h);
+        float[] p4 = mapCoord(face, facing, u1, v2, h);
 
-        float x2 = cx + h1 * nx + u2 * tx + v2 * bx;
-        float y2 = cy + h1 * ny + u2 * ty + v2 * by;
-        float z2 = cz + h1 * nz + u2 * tz + v2 * bz;
-
-        float x3 = cx + h2 * nx + u2 * tx + v2 * bx;
-        float y3 = cy + h2 * ny + u2 * ty + v2 * by;
-        float z3 = cz + h2 * nz + u2 * tz + v2 * bz;
-
-        float x4 = cx + h2 * nx + u1 * tx + v1 * bx;
-        float y4 = cy + h2 * ny + u1 * ty + v1 * by;
-        float z4 = cz + h2 * nz + u1 * tz + v1 * bz;
-
-        addDoubleSidedQuad(pose, vc, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, r, g, b, 255);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setColor(r, g, b, 255);
     }
 
-    private static void addDoubleSidedQuad(Matrix4f pose, VertexConsumer vc,
-                                           float x1, float y1, float z1,
-                                           float x2, float y2, float z2,
-                                           float x3, float y3, float z3,
-                                           float x4, float y4, float z4,
-                                           int r, int g, int b, int a) {
-        vc.addVertex(pose, x1, y1, z1).setUv(0, 0).setColor(r, g, b, a);
-        vc.addVertex(pose, x2, y2, z2).setUv(1, 0).setColor(r, g, b, a);
-        vc.addVertex(pose, x3, y3, z3).setUv(1, 1).setColor(r, g, b, a);
-        vc.addVertex(pose, x4, y4, z4).setUv(0, 1).setColor(r, g, b, a);
+    private static void renderFaceQuadSide(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
+                                           float u1, float v1, float u2, float v2, float h1, float h2,
+                                           int r, int g, int b) {
+        float[] p1 = mapCoord(face, facing, u1, v1, h1);
+        float[] p2 = mapCoord(face, facing, u2, v2, h1);
+        float[] p3 = mapCoord(face, facing, u2, v2, h2);
+        float[] p4 = mapCoord(face, facing, u1, v1, h2);
 
-        vc.addVertex(pose, x4, y4, z4).setUv(0, 1).setColor(r, g, b, a);
-        vc.addVertex(pose, x3, y3, z3).setUv(1, 1).setColor(r, g, b, a);
-        vc.addVertex(pose, x2, y2, z2).setUv(1, 0).setColor(r, g, b, a);
-        vc.addVertex(pose, x1, y1, z1).setUv(0, 0).setColor(r, g, b, a);
+        vc.addVertex(pose, p1[0], p1[1], p1[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p2[0], p2[1], p2[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p3[0], p3[1], p3[2]).setColor(r, g, b, 255);
+        vc.addVertex(pose, p4[0], p4[1], p4[2]).setColor(r, g, b, 255);
     }
 }

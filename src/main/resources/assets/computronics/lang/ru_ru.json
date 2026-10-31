@@ -29,6 +29,9 @@
 
   "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
   "item.computronics.mini_button": "Тактильная кнопка управления",
+  "item.computronics.seven_segment": "7-Сегментный цифровой индикатор",
+  "tooltip.computronics.seven_segment.desc1": "Монтируемый светодиодный цифровой семисегментный индикатор для панели.",
+  "tooltip.computronics.seven_segment.desc2": "Настраивается через графический интерфейс отвёртки или OpenComputers API.",
   "item.computronics.card_beep": "Звуковая карта (Beep)",
   "item.computronics.card_fx": "Карта визуальных эффектов (FX)",
   "tooltip.computronics.card_beep.desc": "Генерирует звуковые сигналы прямоугольных импульсов заданной частоты.",

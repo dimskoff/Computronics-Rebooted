@@ -38,6 +38,7 @@ public class ModCreativeTabs {
                         output.accept(ModItems.SCREWDRIVER.get());
                         output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.MINI_BUTTON.get());
+                        output.accept(ModItems.SEVEN_SEGMENT.get());
                         output.accept(ModItems.NETWORK_CARD_3.get());
                         output.accept(ModItems.PACKET_SNIFFER.get());
                         output.accept(ModItems.CARD_BOOM.get());

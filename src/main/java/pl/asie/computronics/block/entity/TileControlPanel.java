@@ -25,12 +25,14 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import pl.asie.computronics.block.BlockControlPanel;
 import pl.asie.computronics.init.ModBlockEntities;
 import pl.asie.computronics.init.ModItems;
 import pl.asie.computronics.init.ModSounds;
 import pl.asie.computronics.item.ItemMiniButton;
 import pl.asie.computronics.item.ItemMiniLamp;
 import pl.asie.computronics.item.ItemScrewdriver;
+import pl.asie.computronics.item.ItemSevenSegment;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,7 +46,8 @@ public class TileControlPanel extends TileEntityComputronics {
     public enum ElementType {
         NONE,
         BUTTON,
-        LAMP
+        LAMP,
+        SEVEN_SEGMENT
     }
 
     public static class PanelElement {
@@ -58,6 +61,7 @@ public class TileControlPanel extends TileEntityComputronics {
         public String label = "";
         public int textColor = 0xFFFFFF;
         public boolean bold = true;
+        public String displayValue = "0";
     }
 
     private final PanelElement[] elements = new PanelElement[TOTAL_SLOTS];
@@ -167,14 +171,27 @@ public class TileControlPanel extends TileEntityComputronics {
     }
 
     public int[] calculateGridPos(BlockHitResult hit) {
+        if (level != null) {
+            return BlockControlPanel.calculateGrid(getBlockState(), worldPosition, hit);
+        }
         return calculateGridPos(hit.getLocation());
     }
 
     public ItemInteractionResult onInteractWithItem(Player player, InteractionHand hand, BlockHitResult hit) {
         ItemStack held = player.getItemInHand(hand);
 
-        // Screwdriver has its own UseOnContext handler
+        // Screwdriver opens GUI or configures
         if (held.getItem() instanceof ItemScrewdriver) {
+            int[] grid = calculateGridPos(hit);
+            if (grid != null) {
+                PanelElement elem = findRootElement(grid[0], grid[1]);
+                if (elem != null && elem.type != ElementType.NONE) {
+                    if (level != null && level.isClientSide()) {
+                        pl.asie.computronics.client.gui.ControlPanelConfigScreen.open(this, elem.slot);
+                    }
+                    return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
+                }
+            }
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
@@ -185,34 +202,29 @@ public class TileControlPanel extends TileEntityComputronics {
 
         int gx = grid[0];
         int gy = grid[1];
-        int slot = getSlotIndex(gx, gy);
 
         if (held.getItem() instanceof ItemMiniLamp) {
-            PanelElement existing = findRootElement(gx, gy);
-            if (existing == null) {
-                elements[slot].type = ElementType.LAMP;
-                elements[slot].color = 0x20CC40; // Green
-                elements[slot].active = true;
-                elements[slot].size = 1;
-                elements[slot].label = "";
+            int size = ItemMiniLamp.getPlacementSize(held);
+            if (mountElementWithSize(gx, gy, ElementType.LAMP, 0x20CC40, size)) {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.5f);
-                markChangedAndSync();
-                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fInstalled Mini Lamp at (%d, %d)", gx, gy)), true);
+                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Indicator Lamp at (%d, %d)", size, size, gx, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         } else if (held.getItem() instanceof ItemMiniButton) {
-            PanelElement existing = findRootElement(gx, gy);
-            if (existing == null) {
-                elements[slot].type = ElementType.BUTTON;
-                elements[slot].color = 0xCC2020; // Red
-                elements[slot].active = false;
-                elements[slot].size = 1;
-                elements[slot].label = "";
+            int size = ItemMiniButton.getPlacementSize(held);
+            if (mountElementWithSize(gx, gy, ElementType.BUTTON, 0xCC2020, size)) {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.2f);
-                markChangedAndSync();
-                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fInstalled Mini Button at (%d, %d)", gx, gy)), true);
+                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fMounted %dx%d Tactile Button at (%d, %d)", size, size, gx, gy)), true);
+                return ItemInteractionResult.SUCCESS;
+            }
+        } else if (held.getItem() instanceof ItemSevenSegment) {
+            int size = ItemSevenSegment.getPlacementSize(held);
+            if (mountElementWithSize(gx, gy, ElementType.SEVEN_SEGMENT, 0x00FFCC, size)) {
+                if (!player.isCreative()) held.shrink(1);
+                if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.4f);
+                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %dx%d 7-Segment Display at (%d, %d)", size, size, gx, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         }
@@ -220,18 +232,88 @@ public class TileControlPanel extends TileEntityComputronics {
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
-    public boolean mountElementAt(int gx, int gy, ElementType type, int color) {
-        if (gx < 0 || gx >= GRID_SIZE || gy < 0 || gy >= GRID_SIZE) return false;
-        PanelElement existing = findRootElement(gx, gy);
-        if (existing != null) return false;
-        int slot = getSlotIndex(gx, gy);
-        elements[slot].type = type;
-        elements[slot].color = color;
-        elements[slot].active = (type == ElementType.LAMP);
-        elements[slot].size = 1;
-        elements[slot].label = "";
+    public boolean mountElementWithSize(int gx, int gy, ElementType type, int color, int size) {
+        if (gx < 0 || gx + size > GRID_SIZE || gy < 0 || gy + size > GRID_SIZE) return false;
+        // Verify entire footprint is completely free
+        for (int x = gx; x < gx + size; x++) {
+            for (int y = gy; y < gy + size; y++) {
+                if (findRootElement(x, y) != null) return false;
+            }
+        }
+        int rootSlot = getSlotIndex(gx, gy);
+        elements[rootSlot].type = type;
+        elements[rootSlot].color = color;
+        elements[rootSlot].size = size;
+        elements[rootSlot].active = (type == ElementType.LAMP || type == ElementType.SEVEN_SEGMENT);
+        elements[rootSlot].label = "";
+        elements[rootSlot].displayValue = (type == ElementType.SEVEN_SEGMENT) ? "0" : "";
         markChangedAndSync();
         return true;
+    }
+
+    public boolean mountElementAt(int gx, int gy, ElementType type, int color) {
+        return mountElementWithSize(gx, gy, type, color, 1);
+    }
+
+    public void configureElement(int slot, int color, int size, String label, int textColor, boolean bold, String displayValue) {
+        if (slot < 0 || slot >= TOTAL_SLOTS) return;
+        PanelElement elem = elements[slot];
+        if (elem.type == ElementType.NONE) return;
+        elem.color = color;
+        elem.label = label != null ? label : "";
+        elem.textColor = textColor;
+        elem.bold = bold;
+        if (displayValue != null && !displayValue.isEmpty()) {
+            elem.displayValue = displayValue;
+        }
+
+        // Handle resizing if valid
+        if (size != elem.size && size >= 1 && size <= 4) {
+            int gx = slot % GRID_SIZE;
+            int gy = slot / GRID_SIZE;
+            if (gx + size <= GRID_SIZE && gy + size <= GRID_SIZE) {
+                boolean clear = true;
+                for (int x = gx; x < gx + size; x++) {
+                    for (int y = gy; y < gy + size; y++) {
+                        PanelElement other = findRootElement(x, y);
+                        if (other != null && other != elem) {
+                            clear = false;
+                            break;
+                        }
+                    }
+                    if (!clear) break;
+                }
+                if (clear) {
+                    elem.size = size;
+                }
+            }
+        }
+        markChangedAndSync();
+    }
+
+    public void removeElementAndDrop(int slot, Player player) {
+        if (slot < 0 || slot >= TOTAL_SLOTS) return;
+        PanelElement elem = elements[slot];
+        if (elem.type == ElementType.NONE) return;
+        ElementType oldType = elem.type;
+        elem.type = ElementType.NONE;
+        elem.active = false;
+        elem.size = 1;
+        elem.label = "";
+        elem.displayValue = "0";
+        markChangedAndSync();
+
+        ItemStack drop = switch (oldType) {
+            case BUTTON -> new ItemStack(pl.asie.computronics.init.ModItems.MINI_BUTTON.get());
+            case LAMP -> new ItemStack(pl.asie.computronics.init.ModItems.MINI_LAMP.get());
+            case SEVEN_SEGMENT -> new ItemStack(pl.asie.computronics.init.ModItems.SEVEN_SEGMENT.get());
+            default -> ItemStack.EMPTY;
+        };
+        if (!drop.isEmpty() && player != null) {
+            if (!player.getInventory().add(drop)) {
+                player.drop(drop, false);
+            }
+        }
     }
 
     public InteractionResult onInteractEmptyHand(Player player, BlockHitResult hit) {
@@ -405,10 +487,50 @@ public class TileControlPanel extends TileEntityComputronics {
                 map.put("size", elements[i].size);
                 map.put("label", elements[i].label);
                 map.put("pressed", elements[i].pressTicks > 0);
+                map.put("displayValue", elements[i].displayValue);
                 result.add(map);
             }
         }
         return new Object[]{result};
+    }
+
+    @Callback(doc = "function(slot:number, value:any):boolean -- Sets the 7-segment display value or number.")
+    public Object[] setSegment(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return result(false, "invalid slot");
+        PanelElement elem = elements[slot];
+        if (elem.type != ElementType.SEVEN_SEGMENT) return result(false, "element is not a 7-segment display");
+
+        if (args.isBoolean(1)) {
+            elem.active = args.checkBoolean(1);
+        } else if (args.isDouble(1) || args.isInteger(1)) {
+            elem.displayValue = String.valueOf(args.checkInteger(1));
+            elem.active = true;
+        } else {
+            elem.displayValue = args.checkString(1);
+            elem.active = true;
+        }
+        markChangedAndSync();
+        return result(true);
+    }
+
+    @Callback(doc = "function(slot:number):string -- Gets the current 7-segment display value.")
+    public Object[] getSegment(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return result(null, "invalid slot");
+        PanelElement elem = elements[slot];
+        return result(elem.displayValue != null ? elem.displayValue : "");
+    }
+
+    @Callback(doc = "function(slot:number, color:number):boolean -- Sets the color of any element.")
+    public Object[] setColor(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return result(false, "invalid slot");
+        PanelElement elem = elements[slot];
+        if (elem.type == ElementType.NONE) return result(false, "empty slot");
+        elem.color = args.checkInteger(1);
+        markChangedAndSync();
+        return result(true);
     }
 
     @Override
@@ -439,9 +561,10 @@ public class TileControlPanel extends TileEntityComputronics {
                 itemTag.putInt("color", elements[i].color);
                 itemTag.putBoolean("active", elements[i].active);
                 itemTag.putInt("size", elements[i].size);
-                itemTag.putString("label", elements[i].label);
+                itemTag.putString("label", elements[i].label != null ? elements[i].label : "");
                 itemTag.putInt("textColor", elements[i].textColor);
                 itemTag.putBoolean("bold", elements[i].bold);
+                itemTag.putString("displayValue", elements[i].displayValue != null ? elements[i].displayValue : "0");
                 list.add(itemTag);
             }
         }
@@ -458,6 +581,7 @@ public class TileControlPanel extends TileEntityComputronics {
             elements[i].label = "";
             elements[i].textColor = 0xFFFFFF;
             elements[i].bold = true;
+            elements[i].displayValue = "0";
         }
         if (tag.contains("elements")) {
             ListTag list = tag.getList("elements", 10);
@@ -473,6 +597,7 @@ public class TileControlPanel extends TileEntityComputronics {
                     elements[slot].label = itemTag.contains("label") ? itemTag.getString("label") : "";
                     elements[slot].textColor = itemTag.contains("textColor") ? itemTag.getInt("textColor") : 0xFFFFFF;
                     elements[slot].bold = !itemTag.contains("bold") || itemTag.getBoolean("bold");
+                    elements[slot].displayValue = itemTag.contains("displayValue") ? itemTag.getString("displayValue") : "0";
                 }
             }
         }
