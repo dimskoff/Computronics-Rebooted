@@ -89,7 +89,7 @@ public class TileLaserTransceiver extends TileEntityComputronics {
     public void onMessage(Message message) {
         super.onMessage(message);
         if ("network.message".equals(message.name()) && linkedTransceiver != null && !beamBroken) {
-            if (linkedTransceiver.node() != null) {
+            if (linkedTransceiver.node() != null && message.source() != linkedTransceiver.node()) {
                 // Forward packet across laser beam
                 linkedTransceiver.node().sendToReachable("network.message", message.data());
             }

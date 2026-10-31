@@ -32,6 +32,18 @@ public class BlockTapeDrive extends BlockComputronics {
     }
 
     @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileTapeDrive tapeDrive) {
+            ItemInteractionResult res = tapeDrive.onInteract(player, InteractionHand.MAIN_HAND);
+            if (res.consumesAction()) {
+                return res.result();
+            }
+        }
+        return super.useWithoutItem(state, level, pos, player, hitResult);
+    }
+
+    @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
