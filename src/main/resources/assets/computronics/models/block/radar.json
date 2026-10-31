@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "computronics:block/radar_side",
+    "north": "computronics:block/radar_side",
+    "south": "computronics:block/radar_side",
+    "east": "computronics:block/radar_side",
+    "west": "computronics:block/radar_side",
+    "up": "computronics:block/machine_top",
+    "down": "computronics:block/machine_bottom"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "computronics:block/acoustic_sensor"
+    }
+  }
+}

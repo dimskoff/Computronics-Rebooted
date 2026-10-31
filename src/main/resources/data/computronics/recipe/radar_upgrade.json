@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " R ",
+    "IRI",
+    " R "
+  ],
+  "key": {
+    "R": {
+      "item": "computronics:radar"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "result": {
+    "count": 1,
+    "id": "computronics:radar_upgrade"
+  }
+}

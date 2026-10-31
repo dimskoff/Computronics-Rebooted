@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="MIT"
+
+[[mods]]
+modId="computronics"
+version="${mod_version}"
+displayName="Computronics: Rebooted"
+authors="asie, Vexatos, Dimsk"
+description="Computronics: Rebooted for Minecraft 1.21.1 NeoForge. Advanced networking, acoustics, sensors, tapes and robotics for OpenComputers."
+
+[[dependencies.computronics]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.computronics]]
+    modId="neoforge"
+    mandatory=true
+    versionRange="${neoforge_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.computronics]]
+    modId="opencomputers"
+    mandatory=true
+    versionRange="[1.9,)"
+    ordering="AFTER"
+    side="BOTH"
