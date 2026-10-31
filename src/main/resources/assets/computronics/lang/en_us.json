@@ -10,6 +10,17 @@
   "block.computronics.inductive_charger": "Inductive Charger Pad",
   "block.computronics.laser_transceiver": "Laser Transceiver",
   "block.computronics.analog_gauge": "Analog Dial Gauge",
+  "block.computronics.iron_noteblock": "Iron Note Block",
+  "block.computronics.control_panel": "Modular Control Panel",
+
+  "item.computronics.mini_lamp": "Miniature Indicator Lamp",
+  "item.computronics.mini_button": "Tactile Push Button",
+  "item.computronics.card_beep": "Audio Beep Card",
+  "item.computronics.card_fx": "Particle FX Card",
+  "tooltip.computronics.card_beep.desc": "Generates multi-frequency square-wave synthesizer tones.",
+  "tooltip.computronics.card_fx.desc": "Emits programmable particle effects around machine.",
+  "tooltip.computronics.mini_lamp.desc": "Right-click on Control Panel to mount a miniature RGB LED.",
+  "tooltip.computronics.mini_button.desc": "Right-click on Control Panel to mount a tactile push button.",
 
   "item.computronics.network_card_3": "Network Card (Tier 3)",
   "item.computronics.packet_sniffer": "Packet Sniffer Card",

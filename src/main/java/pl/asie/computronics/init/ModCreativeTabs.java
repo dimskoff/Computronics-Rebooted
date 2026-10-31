@@ -28,12 +28,18 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.INDUCTIVE_CHARGER.get());
                         output.accept(ModBlocks.LASER_TRANSCEIVER.get());
                         output.accept(ModBlocks.ANALOG_GAUGE.get());
+                        output.accept(ModBlocks.IRON_NOTEBLOCK.get());
+                        output.accept(ModBlocks.CONTROL_PANEL.get());
 
                         // Items & Cards
+                        output.accept(ModItems.MINI_LAMP.get());
+                        output.accept(ModItems.MINI_BUTTON.get());
                         output.accept(ModItems.NETWORK_CARD_3.get());
                         output.accept(ModItems.PACKET_SNIFFER.get());
                         output.accept(ModItems.CARD_BOOM.get());
                         output.accept(ModItems.RF_JAMMER_CARD.get());
+                        output.accept(ModItems.CARD_BEEP.get());
+                        output.accept(ModItems.CARD_FX.get());
                         output.accept(ModItems.CHAT_UPGRADE.get());
                         output.accept(ModItems.RADAR_UPGRADE.get());
                         output.accept(ModItems.CAMERA_UPGRADE.get());

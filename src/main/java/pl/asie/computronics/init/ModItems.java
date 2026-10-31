@@ -32,6 +32,16 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.LASER_TRANSCEIVER.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> ANALOG_GAUGE = ITEMS.register("analog_gauge",
             () -> new BlockItem(ModBlocks.ANALOG_GAUGE.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> IRON_NOTEBLOCK = ITEMS.register("iron_noteblock",
+            () -> new BlockItem(ModBlocks.IRON_NOTEBLOCK.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> CONTROL_PANEL = ITEMS.register("control_panel",
+            () -> new BlockItem(ModBlocks.CONTROL_PANEL.get(), new Item.Properties()));
+
+    // Control Panel Modular Elements
+    public static final DeferredItem<ItemMiniLamp> MINI_LAMP = ITEMS.register("mini_lamp",
+            () -> new ItemMiniLamp(new Item.Properties()));
+    public static final DeferredItem<ItemMiniButton> MINI_BUTTON = ITEMS.register("mini_button",
+            () -> new ItemMiniButton(new Item.Properties()));
 
     // Hardware Cards & Upgrades
     public static final DeferredItem<ItemNetworkCardTier3> NETWORK_CARD_3 = ITEMS.register("network_card_3",
@@ -42,6 +52,10 @@ public class ModItems {
             () -> new ItemCardBoom(new Item.Properties().rarity(Rarity.RARE)));
     public static final DeferredItem<ItemRFJammerCard> RF_JAMMER_CARD = ITEMS.register("rf_jammer_card",
             () -> new ItemRFJammerCard(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<ItemCardBeep> CARD_BEEP = ITEMS.register("card_beep",
+            () -> new ItemCardBeep(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<ItemCardFX> CARD_FX = ITEMS.register("card_fx",
+            () -> new ItemCardFX(new Item.Properties().rarity(Rarity.RARE)));
 
     public static final DeferredItem<ItemChatUpgrade> CHAT_UPGRADE = ITEMS.register("chat_upgrade",
             () -> new ItemChatUpgrade(new Item.Properties()));

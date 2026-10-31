@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "computronics:block/light_board/mode_1",
+    "north": "computronics:block/light_board/mode_1",
+    "south": "computronics:block/machine_side",
+    "east": "computronics:block/machine_side",
+    "west": "computronics:block/machine_side",
+    "up": "computronics:block/machine_top",
+    "down": "computronics:block/machine_bottom"
+  }
+}

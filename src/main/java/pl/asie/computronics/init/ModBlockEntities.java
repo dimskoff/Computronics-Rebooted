@@ -40,4 +40,10 @@ public class ModBlockEntities {
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileAnalogGauge>> ANALOG_GAUGE =
             BLOCK_ENTITIES.register("analog_gauge", () -> BlockEntityType.Builder.of(TileAnalogGauge::new, ModBlocks.ANALOG_GAUGE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileIronNote>> IRON_NOTEBLOCK =
+            BLOCK_ENTITIES.register("iron_noteblock", () -> BlockEntityType.Builder.of(TileIronNote::new, ModBlocks.IRON_NOTEBLOCK.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileControlPanel>> CONTROL_PANEL =
+            BLOCK_ENTITIES.register("control_panel", () -> BlockEntityType.Builder.of(TileControlPanel::new, ModBlocks.CONTROL_PANEL.get()).build(null));
 }

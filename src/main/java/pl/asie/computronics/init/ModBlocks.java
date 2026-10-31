@@ -45,4 +45,10 @@ public class ModBlocks {
 
     public static final DeferredBlock<BlockAnalogGauge> ANALOG_GAUGE =
             BLOCKS.register("analog_gauge", () -> new BlockAnalogGauge(metal()));
+
+    public static final DeferredBlock<BlockIronNote> IRON_NOTEBLOCK =
+            BLOCKS.register("iron_noteblock", () -> new BlockIronNote(metal()));
+
+    public static final DeferredBlock<BlockControlPanel> CONTROL_PANEL =
+            BLOCKS.register("control_panel", () -> new BlockControlPanel(metal()));
 }

@@ -10,6 +10,17 @@
   "block.computronics.inductive_charger": "Индукционная зарядная панель",
   "block.computronics.laser_transceiver": "Лазерный приёмопередатчик",
   "block.computronics.analog_gauge": "Аналоговый стрелочный индикатор",
+  "block.computronics.iron_noteblock": "Железный нотный блок",
+  "block.computronics.control_panel": "Модульная панель управления",
+
+  "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
+  "item.computronics.mini_button": "Тактильная кнопка управления",
+  "item.computronics.card_beep": "Звуковая карта (Beep)",
+  "item.computronics.card_fx": "Карта визуальных эффектов (FX)",
+  "tooltip.computronics.card_beep.desc": "Генерирует звуковые сигналы прямоугольных импульсов заданной частоты.",
+  "tooltip.computronics.card_fx.desc": "Генерирует программируемые визуальные эффекты и частицы вокруг устройства.",
+  "tooltip.computronics.mini_lamp.desc": "ПКМ по панели управления устанавливает миниатюрный RGB светодиод в сетку.",
+  "tooltip.computronics.mini_button.desc": "ПКМ по панели управления устанавливает тактильную кнопку в сетку.",
 
   "item.computronics.network_card_3": "Сетевая карта 3-го уровня",
   "item.computronics.packet_sniffer": "Пакетный сниффер",

@@ -45,9 +45,16 @@ local C = {
     BORDER      = 0x2F3B4C
 }
 
--- Check color depth
-local maxDepth = gpu.maxDepth()
-gpu.setDepth(maxDepth)
+-- Safe color depth setup
+pcall(function()
+    if gpu.getDepth and gpu.maxDepth then
+        local cur = gpu.getDepth()
+        local maxD = gpu.maxDepth()
+        if maxD and maxD ~= cur and (maxD == 1 or maxD == 4 or maxD == 8) then
+            pcall(gpu.setDepth, maxD)
+        end
+    end
+end)
 
 -- ============================================================================
 -- STATE & COMPONENT WRAPPERS
@@ -62,7 +69,8 @@ local logs = {
     chat = {},
     acoustic = {},
     packets = {},
-    tripwire = {}
+    tripwire = {},
+    panel = {}
 }
 
 -- Camera state
@@ -127,6 +135,10 @@ local H = {
     sniffer      = component.isAvailable("packet_sniffer") and component.packet_sniffer or nil,
     jammer       = component.isAvailable("rf_jammer") and component.rf_jammer or nil,
     boom         = component.isAvailable("self_destruct") and component.self_destruct or nil,
+    note         = component.isAvailable("iron_noteblock") and component.iron_noteblock or nil,
+    panel        = component.isAvailable("control_panel") and component.control_panel or nil,
+    beep         = component.isAvailable("beep") and component.beep or nil,
+    fx           = component.isAvailable("particle_fx") and component.particle_fx or nil,
 }
 
 local function rescanHardware()
@@ -143,6 +155,10 @@ local function rescanHardware()
     H.sniffer  = component.isAvailable("packet_sniffer") and component.packet_sniffer or nil
     H.jammer   = component.isAvailable("rf_jammer") and component.rf_jammer or nil
     H.boom     = component.isAvailable("self_destruct") and component.self_destruct or nil
+    H.note     = component.isAvailable("iron_noteblock") and component.iron_noteblock or nil
+    H.panel    = component.isAvailable("control_panel") and component.control_panel or nil
+    H.beep     = component.isAvailable("beep") and component.beep or nil
+    H.fx       = component.isAvailable("particle_fx") and component.particle_fx or nil
 
     if H.modem and not H.modem.isOpen(netPort) then
         pcall(function() H.modem.open(netPort) end)
@@ -226,6 +242,9 @@ local TABS = {
     {id = 11, name = "11:NET/TAP", title = "NETWORK & SNIFFER",    comp = "packet_sniffer"},
     {id = 12, name = "12:JAMMER",  title = "RF SIGNAL JAMMER",     comp = "rf_jammer"},
     {id = 13, name = "13:BOOM",    title = "SELF-DESTRUCT CARD",   comp = "self_destruct"},
+    {id = 14, name = "14:NOTE",    title = "IRON NOTE BLOCK",      comp = "iron_noteblock"},
+    {id = 15, name = "15:PANEL",   title = "MODULAR CONTROL PANEL",comp = "control_panel"},
+    {id = 16, name = "16:FX/BEEP", title = "PARTICLE FX & BEEP",   comp = "particle_fx"},
 }
 
 -- Render Header & Tab Navigation
@@ -251,9 +270,9 @@ local function renderChrome()
     setColors(C.TEXT, C.BG)
     gpu.fill(1, 2, screenW, 2, " ")
 
-    -- First 7 tabs on row 2
+    -- First 8 tabs on row 2
     local curX = 2
-    for i = 1, 7 do
+    for i = 1, 8 do
         local tab = TABS[i]
         local isAct = (currentTab == tab.id)
         local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
@@ -267,11 +286,21 @@ local function renderChrome()
         curX = curX + tw + 1
     end
 
-    -- Remaining 6 tabs on row 3
+    -- Remaining 8 tabs on row 3
     curX = 2
-    for i = 8, #TABS do
+    for i = 9, #TABS do
         local tab = TABS[i]
         local isAct = (currentTab == tab.id)
+        local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
+        local fgCol = isAct and C.BG or C.TAB_TEXT
+        local label = " " .. tab.name .. " "
+        local tw = unicode.len(label)
+        addButton("tab_" .. tab.id, curX, 3, tw, 1, label, function()
+            currentTab = tab.id
+            setStatus("Switched to " .. tab.title)
+        end, bgCol, fgCol)
+        curX = curX + tw + 1
+    end
         local bgCol = isAct and C.TAB_ACTIVE or C.TAB_INACTIVE
         local fgCol = isAct and C.BG or C.TAB_TEXT
         local label = " " .. tab.name .. " "
@@ -336,6 +365,9 @@ local function renderDashboard()
         {"Packet Sniffer (TAP)",H.sniffer,  "packet_sniffer",    11},
         {"RF Signal Jammer",    H.jammer,   "rf_jammer",         12},
         {"Self-Destruct Card",  H.boom,     "self_destruct",     13},
+        {"Iron Note Block",     H.note,     "iron_noteblock",    14},
+        {"Modular Control Panel",H.panel,   "control_panel",     15},
+        {"Particle FX / Beep",  H.fx or H.beep, "particle_fx",   16},
     }
 
     local yPos = 8
@@ -344,8 +376,8 @@ local function renderDashboard()
 
     for i, item in ipairs(comps) do
         local name, obj, compType, tabTarget = item[1], item[2], item[3], item[4]
-        local rx = (i <= 7) and xLeft or xRight
-        local ry = (i <= 7) and (yPos + (i - 1) * 2) or (yPos + (i - 8) * 2)
+        local rx = (i <= 8) and xLeft or xRight
+        local ry = (i <= 8) and (yPos + (i - 1) * 2) or (yPos + (i - 9) * 2)
 
         if ry < screenH - 3 then
             if obj then
@@ -1291,6 +1323,288 @@ local function renderBoom()
 end
 
 -- ============================================================================
+-- TAB 14: IRON NOTE BLOCK
+-- ============================================================================
+local noteInstrument = "harp"
+local noteOctave = 0
+local noteVolume = 1.0
+
+local function renderIronNote()
+    drawBox(3, 5, screenW - 6, screenH - 7, C.PANEL_BG)
+    setColors(C.CYAN, C.PANEL_BG)
+    gpu.set(5, 6, "PROGRAMMABLE IRON NOTE SYNTHESIZER (MIDI / INSTRUMENTS)")
+
+    if not H.note then
+        setColors(C.RED, C.PANEL_BG)
+        gpu.set(5, 9, "Iron Note Block is not connected to this network!")
+        gpu.set(5, 11, "Connect the block with an OpenComputers cable.")
+        return
+    end
+
+    setColors(C.TEXT, C.PANEL_BG)
+    gpu.set(5, 8, "Instrument:")
+    local insts = {"harp", "basedrum", "snare", "hat", "bass", "bell", "flute", "guitar", "chime", "iron_xylophone", "bit", "pling"}
+    for i, inst in ipairs(insts) do
+        local isAct = (noteInstrument == inst)
+        local bx = 18 + ((i - 1) % 6) * 10
+        local by = 8 + math.floor((i - 1) / 6)
+        addButton("inst_" .. inst, bx, by, 9, 1, " " .. unicode.sub(inst, 1, 7) .. " ", function()
+            noteInstrument = inst
+            setStatus("Selected instrument: " .. inst)
+        end, isAct and C.TAB_ACTIVE or C.BTN_BG, isAct and C.BG or C.TEXT)
+    end
+
+    gpu.set(5, 11, "Octave: ")
+    addButton("oct_0", 14, 11, 7, 1, " Low ", function() noteOctave = 0 setStatus("Octave: Low (0-12)") end, noteOctave == 0 and C.TAB_ACTIVE or C.BTN_BG, noteOctave == 0 and C.BG or C.TEXT)
+    addButton("oct_1", 22, 11, 7, 1, " High ", function() noteOctave = 12 setStatus("Octave: High (12-24)") end, noteOctave == 12 and C.TAB_ACTIVE or C.BTN_BG, noteOctave == 12 and C.BG or C.TEXT)
+
+    gpu.set(33, 11, "Volume: ")
+    local vols = {0.25, 0.5, 0.75, 1.0}
+    for i, v in ipairs(vols) do
+        local isAct = (noteVolume == v)
+        addButton("vol_" .. i, 42 + (i - 1) * 7, 11, 6, 1, string.format("%d%%", v * 100), function()
+            noteVolume = v
+            setStatus(string.format("Volume set to %.0f%%", v * 100))
+        end, isAct and C.TAB_ACTIVE or C.BTN_BG, isAct and C.BG or C.TEXT)
+    end
+
+    drawBox(5, 13, screenW - 10, 6, C.PANEL_ALT)
+    setColors(C.YELLOW, C.PANEL_ALT)
+    gpu.set(7, 14, "INTERACTIVE PIANO KEYBOARD (CLICK KEY TO EMIT NOTE):")
+
+    local keys = {
+        {"C", 0}, {"C#", 1}, {"D", 2}, {"D#", 3}, {"E", 4}, {"F", 5},
+        {"F#", 6}, {"G", 7}, {"G#", 8}, {"A", 9}, {"A#", 10}, {"B", 11}, {"C+", 12}
+    }
+
+    local keyX = 7
+    for _, k in ipairs(keys) do
+        local noteNum = noteOctave + k[2]
+        local isSharp = k[1]:find("#")
+        local bgCol = isSharp and 0x222222 or 0xDFE6E9
+        local fgCol = isSharp and 0xFFFFFF or 0x111111
+        addButton("pkey_" .. k[2], keyX, 16, 5, 2, " " .. k[1] .. " ", function()
+            pcall(H.note.playNote, noteInstrument, noteNum, noteVolume)
+            setStatus(string.format("Played note %s (%d) on %s", k[1], noteNum, noteInstrument))
+        end, bgCol, fgCol)
+        keyX = keyX + 5
+    end
+
+    addButton("ch_maj", 5, 20, 16, 1, "[ MAJOR CHORD ]", function()
+        pcall(H.note.playNote, noteInstrument, noteOctave + 0, noteVolume)
+        pcall(H.note.playNote, noteInstrument, noteOctave + 4, noteVolume)
+        pcall(H.note.playNote, noteInstrument, noteOctave + 7, noteVolume)
+        setStatus("Played Major Chord.")
+    end, C.BTN_BG, C.GREEN)
+
+    addButton("ch_min", 23, 20, 16, 1, "[ MINOR CHORD ]", function()
+        pcall(H.note.playNote, noteInstrument, noteOctave + 0, noteVolume)
+        pcall(H.note.playNote, noteInstrument, noteOctave + 3, noteVolume)
+        pcall(H.note.playNote, noteInstrument, noteOctave + 7, noteVolume)
+        setStatus("Played Minor Chord.")
+    end, C.BTN_BG, C.CYAN)
+
+    addButton("ch_arp", 41, 20, 16, 1, "[ ARPEGGIO ]", function()
+        for _, n in ipairs({0, 4, 7, 12}) do
+            pcall(H.note.playNote, noteInstrument, noteOctave + n, noteVolume)
+        end
+        setStatus("Played arpeggio cascade.")
+    end, C.BTN_BG, C.YELLOW)
+end
+
+-- ============================================================================
+-- TAB 15: MODULAR CONTROL PANEL
+-- ============================================================================
+local panelSelectedColor = 0x00FF00
+
+local function renderControlPanel()
+    drawBox(3, 5, screenW - 6, screenH - 7, C.PANEL_BG)
+    setColors(C.CYAN, C.PANEL_BG)
+    gpu.set(5, 6, "MODULAR CONTROL PANEL (8x8 GRID: BUTTONS & MINI LAMPS)")
+
+    if not H.panel then
+        setColors(C.RED, C.PANEL_BG)
+        gpu.set(5, 9, "Control Panel block is not connected to this network!")
+        gpu.set(5, 11, "Connect the block with an OpenComputers cable.")
+        gpu.set(5, 13, "Right-click panel face in-world with Mini Lamps or Mini Buttons to mount them.")
+        return
+    end
+
+    local elements = {}
+    pcall(function() elements = H.panel.getElements() end)
+    local elemMap = {}
+    if type(elements) == "table" then
+        for _, elem in ipairs(elements) do
+            local key = (elem.x or 0) .. "_" .. (elem.y or 0)
+            elemMap[key] = elem
+        end
+    end
+
+    drawBox(5, 8, 36, 11, C.PANEL_ALT)
+    setColors(C.YELLOW, C.PANEL_ALT)
+    gpu.set(7, 9, "FRONT FACE GRID (8x8):")
+
+    for gy = 0, 7 do
+        for gx = 0, 7 do
+            local key = gx .. "_" .. gy
+            local elem = elemMap[key]
+            local bx = 7 + gx * 4
+            local by = 10 + gy
+            if elem then
+                if elem.type == "button" then
+                    addButton("p_btn_" .. gx .. "_" .. gy, bx, by, 3, 1, " B ", function()
+                        pcall(H.panel.pressButton, gx, gy)
+                        setStatus(string.format("Triggered button at (%d, %d)", gx, gy))
+                    end, C.YELLOW, C.BG)
+                elseif elem.type == "lamp" then
+                    local col = (elem.color and elem.color ~= 0) and elem.color or 0x00FF00
+                    addButton("p_lmp_" .. gx .. "_" .. gy, bx, by, 3, 1, " * ", function()
+                        pcall(H.panel.setLampColor, gx, gy, panelSelectedColor)
+                        setStatus(string.format("Set lamp at (%d, %d) to color #%06X", gx, gy, panelSelectedColor))
+                    end, col, 0x000000)
+                end
+            else
+                setColors(C.TEXT_MUTED, C.PANEL_ALT)
+                gpu.set(bx, by, " · ")
+            end
+        end
+    end
+
+    local ctrlX = 43
+    drawBox(ctrlX, 8, screenW - ctrlX - 4, 5, C.PANEL_ALT)
+    setColors(C.CYAN, C.PANEL_ALT)
+    gpu.set(ctrlX + 2, 9, "COLOR PRESETS & BATCH ACTIONS:")
+
+    addButton("pl_col_grn", ctrlX + 2, 10, 9, 1, " GREEN ", function()
+        panelSelectedColor = 0x00FF00
+        for i = 1, 64 do pcall(H.panel.setLampColor, i, 0x00FF00) end
+        setStatus("All lamps set to GREEN.")
+    end, 0x00AA00, C.TEXT)
+
+    addButton("pl_col_red", ctrlX + 12, 10, 9, 1, "  RED  ", function()
+        panelSelectedColor = 0xFF0000
+        for i = 1, 64 do pcall(H.panel.setLampColor, i, 0xFF0000) end
+        setStatus("All lamps set to RED.")
+    end, 0xCC0000, C.TEXT)
+
+    addButton("pl_col_blu", ctrlX + 22, 10, 9, 1, " BLUE  ", function()
+        panelSelectedColor = 0x00A8FF
+        for i = 1, 64 do pcall(H.panel.setLampColor, i, 0x00A8FF) end
+        setStatus("All lamps set to BLUE.")
+    end, 0x0088CC, C.TEXT)
+
+    addButton("pl_clr", ctrlX + 2, 11, 15, 1, "[ CLEAR / OFF ]", function()
+        pcall(H.panel.clear)
+        setStatus("All lamps turned OFF.")
+    end, C.BTN_BG, C.YELLOW)
+
+    drawBox(ctrlX, 14, screenW - ctrlX - 4, screenH - 16, C.PANEL_ALT)
+    setColors(C.YELLOW, C.PANEL_ALT)
+    gpu.set(ctrlX + 2, 15, "BUTTON PRESS EVENT LOG:")
+
+    if #logs.panel == 0 then
+        setColors(C.TEXT_MUTED, C.PANEL_ALT)
+        gpu.set(ctrlX + 2, 17, "No button presses detected.")
+        gpu.set(ctrlX + 2, 18, "Right-click a mounted button in-world!")
+    else
+        for i = 1, math.min(#logs.panel, screenH - 18) do
+            setColors(C.TEXT, C.PANEL_ALT)
+            gpu.set(ctrlX + 2, 16 + i, unicode.sub(logs.panel[i], 1, screenW - ctrlX - 6))
+        end
+    end
+end
+
+-- ============================================================================
+-- TAB 16: PARTICLE FX & BEEP SYNTHESIZER
+-- ============================================================================
+local fxCount = 10
+local fxSpeed = 0.2
+
+local function renderFXBeep()
+    drawBox(3, 5, screenW - 6, screenH - 7, C.PANEL_BG)
+    setColors(C.CYAN, C.PANEL_BG)
+    gpu.set(5, 6, "AUDIO BEEP SYNTHESIZER & PARTICLE FX EMITTER")
+
+    local halfW = math.floor((screenW - 12) / 2)
+    drawBox(5, 8, halfW, screenH - 10, C.PANEL_ALT)
+    setColors(C.YELLOW, C.PANEL_ALT)
+    gpu.set(7, 9, "AUDIO BEEP SYNTHESIZER (SQUARE WAVE):")
+
+    if not H.beep then
+        setColors(C.RED, C.PANEL_ALT)
+        gpu.set(7, 11, "Beep Card is not installed!")
+        gpu.set(7, 12, "Insert Tier 1/2 Card into computer.")
+    else
+        setColors(C.TEXT, C.PANEL_ALT)
+        gpu.set(7, 11, "Frequency Presets:")
+
+        addButton("bp_440", 7, 13, 14, 1, " [ 440 Hz (A4) ] ", function()
+            pcall(H.beep.beep, 440, 0.25)
+            setStatus("Playing 440 Hz A4 tone")
+        end)
+        addButton("bp_880", 23, 13, 14, 1, " [ 880 Hz (A5) ] ", function()
+            pcall(H.beep.beep, 880, 0.25)
+            setStatus("Playing 880 Hz A5 tone")
+        end)
+        addButton("bp_1200", 7, 15, 14, 1, " [ 1200 Hz High ]", function()
+            pcall(H.beep.beep, 1200, 0.2)
+            setStatus("Playing 1200 Hz high tone")
+        end)
+        addButton("bp_chord", 23, 15, 14, 1, " [ DUAL CHORD ]  ", function()
+            pcall(H.beep.beep, {[440] = 0.4, [660] = 0.4})
+            setStatus("Playing dual frequency chord")
+        end, C.BTN_BG, C.GREEN)
+
+        addButton("bp_alarm", 7, 17, 30, 2, "[ 🚨 WARBLE ALARM SIREN ]", function()
+            pcall(H.beep.beep, {[800] = 0.15, [1200] = 0.15})
+            setStatus("Alarm warble emitted")
+        end, C.RED, C.TEXT)
+    end
+
+    local rX = 7 + halfW
+    drawBox(rX, 8, halfW, screenH - 10, C.PANEL_ALT)
+    setColors(C.CYAN, C.PANEL_ALT)
+    gpu.set(rX + 2, 9, "PARTICLE FX CARD GENERATOR:")
+
+    if not H.fx then
+        setColors(C.RED, C.PANEL_ALT)
+        gpu.set(rX + 2, 11, "Particle FX Card is not installed!")
+        gpu.set(rX + 2, 12, "Insert Card into computer.")
+    else
+        setColors(C.TEXT, C.PANEL_ALT)
+        gpu.set(rX + 2, 11, "Spawn Visual Particles:")
+
+        local parts = {
+            {"flame", "🔥 FLAME"},
+            {"portal", "🌀 PORTAL"},
+            {"sculk_charge", "🖤 SCULK"},
+            {"electric_spark", "⚡ ELECTRIC"},
+            {"sonic_boom", "💥 SONIC BOOM"},
+            {"enchant", "✨ ENCHANT"}
+        }
+
+        for i, p in ipairs(parts) do
+            local px = rX + 2 + ((i - 1) % 2) * 16
+            local py = 13 + math.floor((i - 1) / 2) * 2
+            addButton("fx_" .. p[1], px, py, 15, 1, "[ " .. p[2] .. " ]", function()
+                pcall(H.fx.spawn, p[1], 0, 0.5, 0, fxCount, fxSpeed)
+                setStatus("Spawned particles: " .. p[2])
+            end, C.BTN_BG, C.CYAN)
+        end
+
+        setColors(C.TEXT, C.PANEL_ALT)
+        gpu.set(rX + 2, 20, "Particle Count: ")
+        local counts = {5, 15, 50}
+        for i, cnt in ipairs(counts) do
+            addButton("cnt_" .. cnt, rX + 18 + (i - 1) * 6, 20, 5, 1, " " .. cnt .. " ", function()
+                fxCount = cnt
+                setStatus("Particle count: " .. cnt)
+            end, fxCount == cnt and C.TAB_ACTIVE or C.BTN_BG, fxCount == cnt and C.BG or C.TEXT)
+        end
+    end
+end
+
+-- ============================================================================
 -- SCREEN DISPATCHER
 -- ============================================================================
 local function render()
@@ -1322,6 +1636,12 @@ local function render()
         renderJammer()
     elseif currentTab == 13 then
         renderBoom()
+    elseif currentTab == 14 then
+        renderIronNote()
+    elseif currentTab == 15 then
+        renderControlPanel()
+    elseif currentTab == 16 then
+        renderFXBeep()
     end
 end
 
@@ -1395,6 +1715,17 @@ while running do
         local line = string.format("[%s] P:%d %s->%s %dB: %s", os.date("%H:%M:%S"), port, src, dst, size, preview)
         table.insert(logs.packets, 1, line)
         if #logs.packets > 20 then table.remove(logs.packets) end
+        render()
+
+    elseif ev == "panel_button" then
+        local slot = tonumber(a) or 0
+        local player = tostring(b or "Player")
+        local gx = tonumber(c) or 0
+        local gy = tonumber(d) or 0
+        local line = string.format("[%s] Button #%d by %s at (%d,%d)", os.date("%H:%M:%S"), slot, player, gx, gy)
+        table.insert(logs.panel, 1, line)
+        if #logs.panel > 20 then table.remove(logs.panel) end
+        setStatus("Control Panel: " .. line)
         render()
 
     elseif ev == "tripwire_triggered" then
