@@ -1,7 +1,8 @@
 {
   "variants": {
-    "": {
-      "model": "computronics:block/rf_jammer"
-    }
+    "facing=north": { "model": "computronics:block/rf_jammer" },
+    "facing=south": { "model": "computronics:block/rf_jammer", "y": 180 },
+    "facing=west":  { "model": "computronics:block/rf_jammer", "y": 270 },
+    "facing=east":  { "model": "computronics:block/rf_jammer", "y": 90 }
   }
 }

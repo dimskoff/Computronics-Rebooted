@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
-      "model": "computronics:block/laser_transceiver"
-    }
+    "facing=north": { "model": "computronics:block/laser_transceiver" },
+    "facing=south": { "model": "computronics:block/laser_transceiver", "y": 180 },
+    "facing=west":  { "model": "computronics:block/laser_transceiver", "y": 270 },
+    "facing=east":  { "model": "computronics:block/laser_transceiver", "y": 90 },
+    "facing=up":    { "model": "computronics:block/laser_transceiver", "x": 270 },
+    "facing=down":  { "model": "computronics:block/laser_transceiver", "x": 90 }
   }
 }

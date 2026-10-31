@@ -1,7 +1,8 @@
 {
   "variants": {
-    "": {
-      "model": "computronics:block/weather_station"
-    }
+    "facing=north": { "model": "computronics:block/weather_station" },
+    "facing=south": { "model": "computronics:block/weather_station", "y": 180 },
+    "facing=west":  { "model": "computronics:block/weather_station", "y": 270 },
+    "facing=east":  { "model": "computronics:block/weather_station", "y": 90 }
   }
 }

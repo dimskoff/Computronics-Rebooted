@@ -13,6 +13,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import pl.asie.computronics.init.ModBlockEntities;
@@ -43,9 +44,28 @@ public class TileInductiveCharger extends TileEntityComputronics {
             return;
         }
 
+        // 1. Charge OpenComputers Robot directly above the inductive charger
+        BlockEntity beAbove = level.getBlockEntity(pos.above());
+        if (beAbove instanceof Robot robot) {
+            Connector robotConn = null;
+            if (robot.node() instanceof Connector conn) {
+                robotConn = conn;
+            } else if (beAbove instanceof li.cil.oc.common.blockentity.RobotProxy proxy && proxy.robot() != null && proxy.robot().node() instanceof Connector conn) {
+                robotConn = conn;
+            }
+            if (robotConn != null) {
+                double buffer = connector().globalBuffer();
+                double toTransfer = Math.min(chargeRate, buffer);
+                if (toTransfer > 0 && connector().tryChangeBuffer(-toTransfer)) {
+                    robotConn.changeBuffer(toTransfer);
+                }
+            }
+        }
+
+        // 2. Charge OpenComputers Drone in the 3D volume above (up to 4 blocks high, allowing full multiblock pads)
         AABB chargeBox = new AABB(
                 pos.getX(), pos.getY() + 1.0, pos.getZ(),
-                pos.getX() + 1.0, pos.getY() + 3.0, pos.getZ() + 1.0
+                pos.getX() + 1.0, pos.getY() + 4.0, pos.getZ() + 1.0
         );
 
         List<Entity> list = level.getEntities((Entity) null, chargeBox);

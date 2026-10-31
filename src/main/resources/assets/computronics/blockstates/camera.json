@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
-      "model": "computronics:block/camera"
-    }
+    "facing=north": { "model": "computronics:block/camera" },
+    "facing=south": { "model": "computronics:block/camera", "y": 180 },
+    "facing=west":  { "model": "computronics:block/camera", "y": 270 },
+    "facing=east":  { "model": "computronics:block/camera", "y": 90 },
+    "facing=up":    { "model": "computronics:block/camera", "x": 270 },
+    "facing=down":  { "model": "computronics:block/camera", "x": 90 }
   }
 }
