@@ -13,6 +13,8 @@
 !/gradlew
 !/gradlew.bat
 !/changelog.md
+!/computronics.lua
+!/relay_node.lua
 
 # APIs and dependencies
 !/libs

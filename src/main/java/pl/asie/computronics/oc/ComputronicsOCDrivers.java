@@ -37,6 +37,13 @@ public final class ComputronicsOCDrivers {
                     () -> FileSystem.fromResource(ResourceLocation.fromNamespaceAndPath("computronics", "loot/explode")),
                     true
             );
+            Items.registerFloppy(
+                    "computronics",
+                    ResourceLocation.fromNamespaceAndPath("computronics", "loot/computronics"),
+                    DyeColor.CYAN,
+                    () -> FileSystem.fromResource(ResourceLocation.fromNamespaceAndPath("computronics", "loot/computronics")),
+                    true
+            );
         } catch (Throwable t) {
             Computronics.LOGGER.warn("Failed to register Computronics loot floppies: {}", t.getMessage());
         }

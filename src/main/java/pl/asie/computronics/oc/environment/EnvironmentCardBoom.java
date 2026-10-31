@@ -51,6 +51,18 @@ public class EnvironmentCardBoom extends AbstractManagedEnvironment {
         return new Object[]{true};
     }
 
+    @Callback(doc = "function():boolean -- Aborts any active self-destruct fuse.")
+    public Object[] abort(Context context, Arguments args) {
+        this.countdown = -1;
+        return new Object[]{true};
+    }
+
+    @Callback(doc = "function():boolean -- Disarms the countdown.")
+    public Object[] disarm(Context context, Arguments args) {
+        this.countdown = -1;
+        return new Object[]{true};
+    }
+
     @Callback(direct = true, doc = "function():number -- Gets remaining fuse time in seconds.")
     public Object[] time(Context context, Arguments args) {
         if (countdown < 0) return new Object[]{-1.0};
