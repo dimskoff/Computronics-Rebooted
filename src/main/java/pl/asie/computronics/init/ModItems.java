@@ -7,6 +7,7 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import pl.asie.computronics.Computronics;
 import pl.asie.computronics.item.*;
+import pl.asie.computronics.item.rack.*;
 
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Computronics.MODID);
@@ -50,6 +51,20 @@ public class ModItems {
             () -> new ItemMiniLamp(new Item.Properties()));
     public static final DeferredItem<ItemMiniButton> MINI_BUTTON = ITEMS.register("mini_button",
             () -> new ItemMiniButton(new Item.Properties()));
+
+    // Server Rack Mountable Boards
+    public static final DeferredItem<ItemRackLightBoard> RACK_BOARD_LIGHT = ITEMS.register("rack_board_light",
+            () -> new ItemRackLightBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<ItemRackSwitchBoard> RACK_BOARD_SWITCH = ITEMS.register("rack_board_switch",
+            () -> new ItemRackSwitchBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<ItemRackBoomBoard> RACK_BOARD_BOOM = ITEMS.register("rack_board_boom",
+            () -> new ItemRackBoomBoard(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<ItemRackCapacitorBoard> RACK_BOARD_CAPACITOR = ITEMS.register("rack_board_capacitor",
+            () -> new ItemRackCapacitorBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<pl.asie.computronics.item.rack.ItemRackCoProcessor> RACK_BOARD_CO_PROCESSOR = ITEMS.register("rack_board_co_processor",
+            () -> new pl.asie.computronics.item.rack.ItemRackCoProcessor(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<pl.asie.computronics.item.rack.ItemRackKVM> RACK_BOARD_KVM = ITEMS.register("rack_board_kvm",
+            () -> new pl.asie.computronics.item.rack.ItemRackKVM(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     // Hardware Cards & Upgrades
     public static final DeferredItem<ItemNetworkCardTier3> NETWORK_CARD_3 = ITEMS.register("network_card_3",

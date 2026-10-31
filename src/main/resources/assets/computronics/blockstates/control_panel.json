@@ -3,6 +3,8 @@
     "facing=north": { "model": "computronics:block/control_panel" },
     "facing=south": { "model": "computronics:block/control_panel", "y": 180 },
     "facing=west":  { "model": "computronics:block/control_panel", "y": 270 },
-    "facing=east":  { "model": "computronics:block/control_panel", "y": 90 }
+    "facing=east":  { "model": "computronics:block/control_panel", "y": 90 },
+    "facing=up":    { "model": "computronics:block/control_panel", "x": 270 },
+    "facing=down":  { "model": "computronics:block/control_panel", "x": 90 }
   }
 }

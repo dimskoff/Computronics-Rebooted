@@ -25,4 +25,10 @@ public class ModSounds {
 
     public static final DeferredHolder<SoundEvent, SoundEvent> TICKET_PRINT =
             SOUNDS.register("ticket_print", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "ticket_print")));
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> BUTTON_PRESS =
+            SOUNDS.register("button_press", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "button_press")));
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> BUTTON_RELEASE =
+            SOUNDS.register("button_release", () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "button_release")));
 }

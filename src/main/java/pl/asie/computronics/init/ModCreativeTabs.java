@@ -49,6 +49,14 @@ public class ModCreativeTabs {
                         output.accept(ModItems.CAMERA_UPGRADE.get());
                         output.accept(ModItems.WINCH_UPGRADE.get());
 
+                        // Server Rack Mountables
+                        output.accept(ModItems.RACK_BOARD_LIGHT.get());
+                        output.accept(ModItems.RACK_BOARD_SWITCH.get());
+                        output.accept(ModItems.RACK_BOARD_BOOM.get());
+                        output.accept(ModItems.RACK_BOARD_CAPACITOR.get());
+                        output.accept(ModItems.RACK_BOARD_CO_PROCESSOR.get());
+                        output.accept(ModItems.RACK_BOARD_KVM.get());
+
                         // Cassette Tapes
                         output.accept(ModItems.TAPE_IRON.get());
                         output.accept(ModItems.TAPE_GOLD.get());

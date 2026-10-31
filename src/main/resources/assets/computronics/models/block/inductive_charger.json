@@ -1,12 +1,7 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/cube_top",
   "textures": {
-    "particle": "computronics:block/rack_capacitor",
-    "north": "computronics:block/digital_controller_box",
-    "south": "computronics:block/digital_controller_box",
-    "east": "computronics:block/digital_controller_box",
-    "west": "computronics:block/digital_controller_box",
-    "up": "computronics:block/rack_capacitor",
-    "down": "computronics:block/machine_bottom"
+    "top": "computronics:block/inductive_charger_top",
+    "side": "opencomputers:block/charger_side"
   }
 }

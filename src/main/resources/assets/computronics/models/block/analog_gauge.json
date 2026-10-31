@@ -1,12 +1,8 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "particle": "computronics:block/switch_board",
-    "north": "computronics:block/switch_board",
-    "south": "computronics:block/machine_side_bundled_input",
-    "east": "computronics:block/machine_side",
-    "west": "computronics:block/machine_side",
-    "up": "computronics:block/switch_board_on",
-    "down": "computronics:block/machine_bottom"
+    "front": "computronics:block/speaker_front",
+    "side": "computronics:block/machine_side",
+    "top": "computronics:block/machine_top"
   }
 }

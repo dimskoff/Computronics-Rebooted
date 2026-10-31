@@ -90,8 +90,8 @@ while running do
         packetCount = packetCount + 1
         local localAddr = a
         local remoteAddr = b
-        local port = c
-        local distance = d
+        local port = tonumber(c) or 0
+        local distance = tonumber(d) or 0
         local payload = tostring(e or "")
 
         local shortSrc = unicode.sub(tostring(remoteAddr), 1, 8)

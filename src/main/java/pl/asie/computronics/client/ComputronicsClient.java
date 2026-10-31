@@ -19,10 +19,16 @@ import pl.asie.computronics.item.*;
 
 public class ComputronicsClient {
 
+    public static void onRegisterRenderers(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.CONTROL_PANEL.get(), ControlPanelRenderer::new);
+        event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.TAPE_DRIVE.get(), TapeDriveRenderer::new);
+    }
+
     public static void onClientSetup(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
             try {
                 NeoForge.EVENT_BUS.register(PocketTerminalRenderer.INSTANCE);
+                NeoForge.EVENT_BUS.register(RackMountableRenderer.INSTANCE);
 
                 Manual.addProvider(new ResourceContentProvider("computronics", "doc/"));
                 Manual.addTab(
@@ -82,6 +88,24 @@ public class ComputronicsClient {
                         }
                         if (stack.getItem() instanceof ItemSpeechUpgrade) {
                             return "%LANGUAGE%/computronics/item/speech_upgrade.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackLightBoard) {
+                            return "%LANGUAGE%/computronics/item/rack_board_light.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackSwitchBoard) {
+                            return "%LANGUAGE%/computronics/item/rack_board_switch.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackBoomBoard) {
+                            return "%LANGUAGE%/computronics/item/rack_board_boom.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackCapacitorBoard) {
+                            return "%LANGUAGE%/computronics/item/rack_board_capacitor.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackCoProcessor) {
+                            return "%LANGUAGE%/computronics/item/rack_board_co_processor.md";
+                        }
+                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackKVM) {
+                            return "%LANGUAGE%/computronics/item/rack_board_kvm.md";
                         }
                         return null;
                     }

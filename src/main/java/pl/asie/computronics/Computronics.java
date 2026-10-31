@@ -38,6 +38,7 @@ public class Computronics {
 
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(pl.asie.computronics.client.ComputronicsClient::onClientSetup);
+            modEventBus.addListener(pl.asie.computronics.client.ComputronicsClient::onRegisterRenderers);
         }
 
         // Register game event listeners

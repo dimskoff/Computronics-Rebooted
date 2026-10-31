@@ -8,6 +8,10 @@ import li.cil.oc.api.network.Visibility;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.ItemInteractionResult;
@@ -23,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 
 public class TileTapeDrive extends TileEntityComputronics {
     private ItemStack tapeStack = ItemStack.EMPTY;
+    private long insertTime = 0;
     private String state = "STOPPED";
     private float speed = 1.0f;
     private float volume = 1.0f;
@@ -38,9 +43,17 @@ public class TileTapeDrive extends TileEntityComputronics {
         return tapeStack;
     }
 
+    public long getInsertTime() {
+        return insertTime;
+    }
+
     public void setTape(ItemStack stack) {
         this.tapeStack = stack != null ? stack : ItemStack.EMPTY;
+        this.insertTime = level != null ? level.getGameTime() : 0;
         setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     private TapeStorage getStorage() {
@@ -58,8 +71,10 @@ public class TileTapeDrive extends TileEntityComputronics {
         if (tapeStack.isEmpty()) {
             if (!held.isEmpty() && held.getItem() instanceof ItemTape) {
                 tapeStack = held.split(1);
+                insertTime = level.getGameTime();
                 level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_INSERT.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
                 setChanged();
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
                 return ItemInteractionResult.CONSUME;
             }
         } else {
@@ -67,8 +82,10 @@ public class TileTapeDrive extends TileEntityComputronics {
                 player.setItemInHand(hand, tapeStack.copy());
                 tapeStack = ItemStack.EMPTY;
                 state = "STOPPED";
+                insertTime = 0;
                 level.playSound(null, worldPosition, pl.asie.computronics.init.ModSounds.TAPE_EJECT.get(), net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.0f);
                 setChanged();
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
                 return ItemInteractionResult.SUCCESS;
             }
         }
@@ -226,5 +243,35 @@ public class TileTapeDrive extends TileEntityComputronics {
         this.state = tag.getString("state");
         this.speed = tag.contains("speed") ? tag.getFloat("speed") : 1.0f;
         this.volume = tag.contains("volume") ? tag.getFloat("volume") : 1.0f;
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        if (!tapeStack.isEmpty()) {
+            tag.put("tape", tapeStack.save(registries));
+        }
+        tag.putLong("insertTime", insertTime);
+        tag.putString("state", state);
+        return tag;
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider lookupProvider) {
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            if (tag.contains("tape")) {
+                this.tapeStack = ItemStack.parse(lookupProvider, tag.getCompound("tape")).orElse(ItemStack.EMPTY);
+            } else {
+                this.tapeStack = ItemStack.EMPTY;
+            }
+            this.insertTime = tag.getLong("insertTime");
+            this.state = tag.getString("state");
+        }
     }
 }

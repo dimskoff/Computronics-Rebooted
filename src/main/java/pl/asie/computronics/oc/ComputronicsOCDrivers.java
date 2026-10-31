@@ -24,6 +24,7 @@ public final class ComputronicsOCDrivers {
         Driver.add(new DriverItemCameraUpgrade());
         Driver.add(new DriverItemWinchUpgrade());
         Driver.add(new DriverItemTape());
+        Driver.add(new pl.asie.computronics.oc.driver.rack.DriverRackMountable());
 
         try {
             Items.registerFloppy(

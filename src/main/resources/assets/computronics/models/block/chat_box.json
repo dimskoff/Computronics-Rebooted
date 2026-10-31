@@ -1,12 +1,8 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/orientable",
   "textures": {
-    "particle": "computronics:block/chatbox_side",
-    "north": "computronics:block/chatbox_side",
-    "south": "computronics:block/chatbox_side",
-    "east": "computronics:block/chatbox_side",
-    "west": "computronics:block/chatbox_side",
-    "up": "computronics:block/machine_top",
-    "down": "computronics:block/machine_bottom"
+    "front": "computronics:block/chatbox_side",
+    "side": "computronics:block/machine_side",
+    "top": "computronics:block/machine_top"
   }
 }

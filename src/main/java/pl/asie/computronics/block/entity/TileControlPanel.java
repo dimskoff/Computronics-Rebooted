@@ -26,6 +26,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import pl.asie.computronics.init.ModBlockEntities;
 import pl.asie.computronics.init.ModItems;
+import pl.asie.computronics.init.ModSounds;
 import pl.asie.computronics.item.ItemMiniButton;
 import pl.asie.computronics.item.ItemMiniLamp;
 
@@ -64,6 +65,9 @@ public class TileControlPanel extends TileEntityComputronics {
     }
 
     public Direction getFacing() {
+        if (getBlockState().hasProperty(BlockStateProperties.FACING)) {
+            return getBlockState().getValue(BlockStateProperties.FACING);
+        }
         if (getBlockState().hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             return getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
         }
@@ -77,7 +81,13 @@ public class TileControlPanel extends TileEntityComputronics {
             if (elements[i].pressTicks > 0) {
                 elements[i].pressTicks--;
                 if (elements[i].pressTicks == 0) {
+                    if (level != null) {
+                        level.playSound(null, worldPosition, ModSounds.BUTTON_RELEASE.get(), SoundSource.BLOCKS, 0.7f, 1.0f);
+                    }
                     setChanged();
+                    if (level != null && !level.isClientSide) {
+                        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                    }
                 }
             }
         }
@@ -106,19 +116,42 @@ public class TileControlPanel extends TileEntityComputronics {
         }
 
         Vec3 loc = hit.getLocation();
-        double lx = loc.x - worldPosition.getX();
-        double ly = loc.y - worldPosition.getY();
-        double lz = loc.z - worldPosition.getZ();
+        double lx = Math.max(0.0, Math.min(0.999, loc.x - worldPosition.getX()));
+        double ly = Math.max(0.0, Math.min(0.999, loc.y - worldPosition.getY()));
+        double lz = Math.max(0.0, Math.min(0.999, loc.z - worldPosition.getZ()));
 
-        double u = 0.0;
-        double v = Math.max(0.0, Math.min(0.999, ly));
+        double u;
+        double v;
 
         switch (facing) {
-            case NORTH -> u = Math.max(0.0, Math.min(0.999, 1.0 - lx));
-            case SOUTH -> u = Math.max(0.0, Math.min(0.999, lx));
-            case WEST  -> u = Math.max(0.0, Math.min(0.999, lz));
-            case EAST  -> u = Math.max(0.0, Math.min(0.999, 1.0 - lz));
-            default    -> u = 0.5;
+            case UP -> {
+                u = lx;
+                v = lz;
+            }
+            case DOWN -> {
+                u = lx;
+                v = lz;
+            }
+            case NORTH -> {
+                u = lx;
+                v = 1.0 - ly;
+            }
+            case SOUTH -> {
+                u = 1.0 - lx;
+                v = 1.0 - ly;
+            }
+            case WEST -> {
+                u = 1.0 - lz;
+                v = 1.0 - ly;
+            }
+            case EAST -> {
+                u = lz;
+                v = 1.0 - ly;
+            }
+            default -> {
+                u = 0.5;
+                v = 0.5;
+            }
         }
 
         int gx = (int) (u * GRID_SIZE);
@@ -210,7 +243,8 @@ public class TileControlPanel extends TileEntityComputronics {
             if (elem.type == ElementType.BUTTON) {
                 elem.pressTicks = 10;
                 if (level != null) {
-                    level.playSound(null, worldPosition, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.8f, 1.4f);
+                    level.playSound(null, worldPosition, ModSounds.BUTTON_PRESS.get(), SoundSource.BLOCKS, 0.85f, 1.0f);
+                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
                 }
                 if (node != null) {
                     node.sendToReachable("computer.signal", "panel_button", slot + 1, player.getName().getString(), gx, gy);
@@ -295,7 +329,8 @@ public class TileControlPanel extends TileEntityComputronics {
         int gx = slot % GRID_SIZE;
         int gy = slot / GRID_SIZE;
         if (level != null) {
-            level.playSound(null, worldPosition, SoundEvents.UI_BUTTON_CLICK.value(), SoundSource.BLOCKS, 0.8f, 1.4f);
+            level.playSound(null, worldPosition, ModSounds.BUTTON_PRESS.get(), SoundSource.BLOCKS, 0.85f, 1.0f);
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
         if (node != null) {
             node.sendToReachable("computer.signal", "panel_button", slot + 1, "SYSTEM", gx, gy);
@@ -339,6 +374,53 @@ public class TileControlPanel extends TileEntityComputronics {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
         return new Object[]{true};
+    }
+
+    public boolean mountElementAt(int gx, int gy, ElementType type, int color) {
+        int slot = getSlotIndex(gx, gy);
+        if (elements[slot].type == ElementType.NONE) {
+            elements[slot].type = type;
+            elements[slot].color = color;
+            elements[slot].active = (type == ElementType.LAMP);
+            sync();
+            return true;
+        }
+        return false;
+    }
+
+    public PanelElement getElement(int slot) {
+        if (slot >= 0 && slot < TOTAL_SLOTS) {
+            return elements[slot];
+        }
+        return null;
+    }
+
+    public void sync() {
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        saveAdditional(tag, registries);
+        return tag;
+    }
+
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
+        super.onDataPacket(net, pkt, registries);
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            loadAdditional(tag, registries);
+        }
     }
 
     @Override

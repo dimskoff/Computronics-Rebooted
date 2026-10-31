@@ -1,12 +1,23 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "block/block",
   "textures": {
-    "particle": "computronics:block/light_board/mode_1",
-    "north": "computronics:block/light_board/mode_1",
-    "south": "computronics:block/machine_side_bundled_output",
-    "east": "computronics:block/machine_side_bundled_input",
-    "west": "computronics:block/machine_side_bundled_input",
-    "up": "computronics:block/machine_top",
-    "down": "computronics:block/machine_bottom"
-  }
+    "main": "computronics:block/panel",
+    "side": "computronics:block/panel_side",
+    "back": "computronics:block/machine_bottom",
+    "particle": "computronics:block/panel"
+  },
+  "elements": [
+    {
+      "from": [ 0.0, 0.0, 14.0 ],
+      "to": [ 16.0, 16.0, 16.0 ],
+      "faces": {
+        "north": { "uv": [ 0, 0, 16, 16 ], "texture": "#main" },
+        "south": { "uv": [ 0, 0, 16, 16 ], "texture": "#back" },
+        "east":  { "uv": [ 0, 14, 16, 16 ], "texture": "#side" },
+        "west":  { "uv": [ 0, 14, 16, 16 ], "texture": "#side" },
+        "up":    { "uv": [ 0, 14, 16, 16 ], "texture": "#side" },
+        "down":  { "uv": [ 0, 14, 16, 16 ], "texture": "#side" }
+      }
+    }
+  ]
 }

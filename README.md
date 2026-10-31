@@ -1,45 +1,125 @@
-# Mod
+# Computronics: Rebooted
 
-      _____                            _                   _          
-     / ____|                          | |                 (_)         
-    | |     ___  _ __ ___  _ __  _   _| |_ _ __ ___  _ __  _  ___ ___ 
-    | |    / _ \| '_ ` _ \| '_ \| | | | __| '__/ _ \| '_ \| |/ __/ __|
-    | |___| (_) | | | | | | |_) | |_| | |_| | | (_) | | | | | (__\__ \
-     \_____\___/|_| |_| |_| .__/ \__,_|\__|_|  \___/|_| |_|_|\___|___/
-                          | |                                         
-                          |_|                                         
+<p align="center">
+  <img src="src/main/resources/assets/computronics/textures/block/tape_drive_front.png" width="96" height="96" alt="Computronics Logo" />
+</p>
 
+**Computronics: Rebooted** is the next-generation, high-performance port of the legendary **Computronics** mod for **Minecraft 1.21.1** powered by **NeoForge** and fully integrated with **OpenComputers (1.21.1 Port)**.
 
-Computronics is an addon for ComputerCraft and OpenComputers, also adding integration to a lot of other mods.
-### Downloads
-The mod's downloads can be found at https://wiki.vexatos.com/wiki:computronics.
-### License
-The mod's license can be found [here](https://wiki.vexatos.com/wiki:licensing).
+Bringing industrial hardware, analog and digital audio streaming, physical tactile interfaces, server rack infrastructure, cryptography, and wireless telemetry into the modern era of Minecraft modding.
 
-This is the repository for the Computronics Minecraft mod. 
+---
 
-### Mods required to compile
+## 🚀 Key Features & Hardware Modules
 
-| Mod | Version | Author | URL |
-| --- | ------- | ------ | --- |
-| APIs* | 1.0 | javac | [GitHub](https://github.com/asiekierka/Computronics/blob/master/libs/APIs.zip) |
-| Applied Energistics 2*  | rv2-stable-1 | Walrus Technologies Ltd | [Website](http://ae2.ae-mod.info/) |
-| AsieLib* | randomly chosen | asie/Vexatos | [GitHub](https://github.com/asiekierka/AsieLib) |
-| Armourer's Workshop* | 0.33.0.85 | RiskyKen | [Jenkins repo](http://jenkins.rx14.co.uk/job/RiskyKen/job/Armourers-Workshop/) |
-| BestModEver* | 1.7.10 | Notch, jeb, Dinnerbone and others | [Website](http://minecraft.net) |
-| BuildCraft* | 6.4.1 | SpaceToad | [Website](http://mod-buildcraft.com/) |
-| Computronics* | latest | asie/Vexatos | [GitHub](https://github.com/asiekierka/Computronics) |
-| EnderIO* | 2.3.0.368_beta | CrazyPants, tterrag | [Website](http://enderio.com) |
-| Factorization* | 0.8.87.1 | neptunepink | [MCF](http://www.minecraftforum.net/forums/mapping-and-modding/minecraft-mods/1284592-factorization-0-8-88-8-8888-the-update-that-ate) |
-| Flamingo | 1.3 | copygirl/Vexatos | [Github](https://github.com/Vexatos/Flamingo/releases) |
-| Forestry* | 3.5.3.11 | Sengir (don't confuse with Sangar), CovertJaguar, mezz | [Secret hideout](http://ic2api.player.to:8080/job/Forestry/) |
-| Gendustry | 1.4.14.99-mc1.7.10-api | bdew | [bdew's jenkins repo](http://jenkins.bdew.net/job/gendustry-1.7.10/) |
-| GregTech | 5.07.07 | GregoriousT | [IC2 Forums](http://forum.industrial-craft.net/index.php?page=Thread&threadID=7156&) |
-| IndustrialCraft 2* | 2.2.643 | Player | [Wiki](http://wiki.industrial-craft.net/) |
-| OpenComputers* | 1.5.9.21 | Sangar (don't confuse with Sengir) | [Website](http://oc.cil.li/) |
-| OpenModsLib | 0.7.1-snapshot-342 | OpenMods Team | [Website](http://www.openmods.info/) |
-| OpenPeripheralCore | 1.1-snapshot-220 | OpenMods Team | [Website](http://www.openmods.info/) |
-| RailCraft | 9.10.0.0 | CovertJaguar | [Website](http://railcraft.info/) |
-| Waila* | 1.5.10 | ProfMobius | [Website](http://www.mobiusstrip.eu/) |
+### 📼 Tape Drive & Audio Streaming
+* **Digital DFN Audio:** Streams 8-bit digital audio cassettes directly from tape storage into the Minecraft sound engine.
+* **Animated Cassette Slot:** Inserting a cassette smoothly slides it into the mechanism with realistic mechanical feedback.
+* **Tape Operations:** Full support for `play`, `stop`, `pause`, `seek`, `rewind`, and raw 8-bit read/write streaming.
+* **Cassette Tapes:** Tiered from Iron (4 minutes) up to Platinum/Netherite (128 minutes).
 
-(Mods marked with a * are already there or being downloaded automatically)
+### 🎛️ Modular Control Panel (Flat Surface Plate)
+* **Ultra-thin Surface Mounting:** Mounts flat against floors, ceilings, and walls (2 voxels thick) with zero collision clipping.
+* **8×8 Tactile Grid (64 Slots):** Mount miniature tactile push buttons and RGB indicator lamps anywhere on the grid.
+* **Tactile Mechanical Feedback:** Buttons visibly depress into the panel when clicked, accompanied by realistic mechanical click audio (`button_press` / `button_release`).
+* **RGB Status Lamps:** Software-controlled multi-color LEDs with full-bright emissive rendering.
+* **Event System:** Dispatches `panel_button(slot, player, x, y)` signals directly over the OpenComputers network bus.
+
+### 📟 Wireless VRAM Pager / Pocket Terminal
+* **Ergonomic One-Handed First-Person Rendering:** Held naturally in the player's right hand like a map in a boat, with natural ergonomic tilt and no re-equip animation jitter.
+* **Dual-Layer Matrix CRT:** High-contrast retro green phosphor matrix display (32 columns × 12 rows text).
+* **Wireless Network Receiver:** Listens for packets sent over OpenComputers wireless network cards.
+* **Inductive Charging:** Recharges wirelessly when placed above an Inductive Charger Pad.
+
+### ⚡ Inductive Charger Pad
+* **Wireless Energy Induction:** Wirelessly charges handheld terminals and battery-operated robotic devices in a 3-block radius.
+
+### 🖥️ Server Rack Infrastructure
+Computronics server rack modules plug directly into OpenComputers Server Racks:
+* **Light Board:** Customizable status LEDs on the rack chassis.
+* **Switch Board:** Physical toggle switches to direct network flows.
+* **Rack Capacitor:** High-density rack energy buffer.
+* **Rack Cryptographic Co-Processor:** Hardware-accelerated MD5, SHA-256, CRC32, AES-128 cryptographic operations.
+* **Rack KVM Switch Module:** Interactive 4-channel KVM switch to toggle peripherals and keyboard/video streams between mounted servers.
+
+### 📷 Camera & Raycasting
+* **Distance Scanning:** 3D raycasting with distance measurements and block reflectance analysis.
+
+### 💬 Chat Box & Speech Box
+* **Chat Box:** Secure in-game chat reading and broadcasting.
+* **Speech Box:** Text-to-speech audio synthesis directly into the player's vicinity.
+
+### 📡 Wireless & Defense
+* **Radar & Entity Detector:** Detect nearby entities, players, and coordinates.
+* **RF Jammer Card / Block:** Radio frequency interference module to jam wireless network packets within range.
+* **Laser Transceiver:** Optical line-of-sight high-bandwidth network bridges.
+* **Weather Station:** Meteorological sensors reporting weather, temperature, and rain levels.
+
+---
+
+## 💻 OpenOS Lua Programming Examples
+
+### 1. Modular Control Panel
+```lua
+local component = require("component")
+local event = require("event")
+local panel = component.control_panel
+
+-- Turn on a green status lamp at (2, 3)
+panel.setLampColor(2, 3, 0x00FF00)
+panel.setLamp(2, 3, true)
+
+-- Listen for button clicks
+while true do
+  local _, _, slot, player, gx, gy = event.pull("panel_button")
+  print(string.format("Player %s pressed button at (%d, %d) [Slot #%d]", player, gx, gy, slot))
+  -- Toggle lamp on button press
+  panel.setLampColor(gx, gy, 0x00FFFF)
+  panel.setLamp(gx, gy, true)
+end
+```
+
+### 2. Wireless VRAM Pager Telemetry
+```lua
+local component = require("component")
+local modem = component.modem
+
+modem.open(404)
+-- Send text line to the Pocket Terminal
+modem.broadcast(404, "vram_print", 0, "REACTOR CORE: NORMAL", 0x00FF66)
+modem.broadcast(404, "vram_print", 1, "POWER: 98.4% [1240 EU/t]", 0x00FFAA)
+```
+
+### 3. Tape Drive Playback
+```lua
+local component = require("component")
+local tape = component.tape_drive
+
+if tape.isReady() then
+  tape.rewind()
+  tape.play()
+  print("Playing tape: " .. tape.getLabel())
+end
+```
+
+---
+
+## 🛠️ Building & Compilation
+
+### Requirements
+* **Java 21 or Java 25**
+* **Gradle 8.5+** (Included via `gradlew`)
+* **NeoForge 1.21.1** (Configured via NeoGradle)
+
+### Build Command
+```bash
+./gradlew build -x test
+```
+The compiled mod JAR will be located in:
+`build/libs/computronics-2.0.0-dev.1.jar`
+
+---
+
+## 📜 License
+Licensed under the MIT License / AsieLib Open Source License.
+Original Computronics by **asiekierka** and **Vexatos**. Ported and modernized for Minecraft 1.21.1 NeoForge.

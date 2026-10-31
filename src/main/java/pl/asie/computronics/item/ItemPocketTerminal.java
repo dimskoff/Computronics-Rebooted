@@ -23,8 +23,10 @@ import java.util.UUID;
 
 public class ItemPocketTerminal extends Item implements Chargeable {
     public static final double MAX_CHARGE = 20000.0;
-    public static final int SCREEN_WIDTH = 30;
-    public static final int SCREEN_HEIGHT = 10;
+    public static final int SCREEN_WIDTH = 32;
+    public static final int SCREEN_HEIGHT = 12;
+    public static final int TOTAL_VRAM = SCREEN_WIDTH * SCREEN_HEIGHT;
+    public static final int DEFAULT_PORT = 404;
 
     public ItemPocketTerminal(Properties properties) {
         super(properties.stacksTo(1));
@@ -74,6 +76,28 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         });
     }
 
+    public static int getListeningPort(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null && customData.contains("port")) {
+            return customData.copyTag().getInt("port");
+        }
+        return DEFAULT_PORT;
+    }
+
+    public static void setListeningPort(ItemStack stack, int port) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
+            tag.putInt("port", Math.max(1, Math.min(65535, port)));
+        });
+    }
+
+    public static String getFirmware(ItemStack stack) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null && customData.contains("firmware")) {
+            return customData.copyTag().getString("firmware");
+        }
+        return "Micro-Kernel v2.0";
+    }
+
     public static String getTerminalId(ItemStack stack) {
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         if (customData != null && customData.contains("term_id")) {
@@ -88,13 +112,20 @@ public class ItemPocketTerminal extends Item implements Chargeable {
             final String newId = UUID.randomUUID().toString();
             CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
                 tag.putString("term_id", newId);
+                tag.putInt("port", DEFAULT_PORT);
+                tag.putString("firmware", "Micro-Kernel v2.0");
                 tag.putInt("fg_col", 0x00FF66);
                 tag.putInt("bg_col", 0x08150A);
-                tag.putString("title", "POCKET TERMINAL");
+                tag.putString("title", "WIRELESS VRAM PAGER");
             });
             return newId;
         }
         return id;
+    }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        return slotChanged || oldStack.getItem() != newStack.getItem();
     }
 
     @Override
@@ -118,12 +149,28 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         ItemStack stack = player.getItemInHand(hand);
         getOrCreateTerminalId(stack);
 
+        // Microcontroller EEPROM Flashing (Sneak + Right Click with EEPROM in offhand or hand)
+        ItemStack offhand = player.getOffhandItem();
+        if (player.isShiftKeyDown() && !offhand.isEmpty() && offhand.getItem().getDescriptionId().toLowerCase().contains("eeprom")) {
+            if (!level.isClientSide()) {
+                String eepromName = offhand.getHoverName().getString();
+                CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
+                    tag.putString("firmware", eepromName);
+                    tag.putString("line_0", "== BOOT: " + (eepromName.length() > 18 ? eepromName.substring(0, 18) : eepromName) + " ==");
+                    tag.putString("line_1", "Firmware flashed successfully.");
+                });
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8f, 1.6f);
+                player.displayClientMessage(Component.literal("§a[VRAM Pager] §fFlashed microcontroller firmware from " + eepromName).withStyle(ChatFormatting.GREEN), true);
+            }
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        }
+
         if (!level.isClientSide()) {
             boolean active = isActive(stack);
             double charge = getCharge(stack);
 
             if (!active && charge <= 0.0) {
-                player.displayClientMessage(Component.literal("§c[Pocket Terminal: No Charge - Place on Inductive Charger]").withStyle(ChatFormatting.RED), true);
+                player.displayClientMessage(Component.literal("§c[VRAM Pager: No Charge - Place on Inductive Charger Pad]").withStyle(ChatFormatting.RED), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.5f);
                 return InteractionResultHolder.sidedSuccess(stack, false);
             }
@@ -133,13 +180,14 @@ public class ItemPocketTerminal extends Item implements Chargeable {
 
             String id = getTerminalId(stack);
             String shortId = id != null && id.length() >= 8 ? id.substring(0, 8) : "--------";
+            int port = getListeningPort(stack);
 
             if (newActive) {
                 int pct = (int) Math.round(charge / MAX_CHARGE * 100.0);
-                player.displayClientMessage(Component.literal("§a[Pocket Terminal: ON | " + pct + "% | ID: " + shortId + "]").withStyle(ChatFormatting.GREEN), true);
+                player.displayClientMessage(Component.literal("§a[VRAM Pager: ON | Port " + port + " | ID: " + shortId + " | " + pct + "%]").withStyle(ChatFormatting.GREEN), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.6f, 1.8f);
             } else {
-                player.displayClientMessage(Component.literal("§7[Pocket Terminal: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
+                player.displayClientMessage(Component.literal("§7[VRAM Pager: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.8f);
             }
         }
@@ -161,7 +209,7 @@ public class ItemPocketTerminal extends Item implements Chargeable {
                     if (newCharge <= 0.0) {
                         setActive(stack, false);
                         active = false;
-                        player.displayClientMessage(Component.literal("§c[Pocket Terminal: Battery Depleted]").withStyle(ChatFormatting.RED), true);
+                        player.displayClientMessage(Component.literal("§c[VRAM Pager: Battery Depleted]").withStyle(ChatFormatting.RED), true);
                     }
                 }
 
@@ -183,6 +231,8 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         double charge = getCharge(stack);
         String id = getTerminalId(stack);
         String shortId = id != null && id.length() >= 8 ? id.substring(0, 8) : "None";
+        int port = getListeningPort(stack);
+        String fw = getFirmware(stack);
 
         tooltip.add(Component.translatable("tooltip.computronics.pocket_terminal.desc1").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.computronics.pocket_terminal.desc2").withStyle(ChatFormatting.GRAY));
@@ -191,6 +241,8 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         tooltip.add(Component.literal(active ? "§a● State: ACTIVE / ON" : "§7○ State: STANDBY / OFF"));
         int pct = (int) Math.round(charge / MAX_CHARGE * 100.0);
         tooltip.add(Component.literal(String.format("§eBattery: %.0f / %.0f EU (%d%%)", charge, MAX_CHARGE, pct)));
-        tooltip.add(Component.literal("§bTerminal ID: §f" + (flag.isAdvanced() && id != null ? id : shortId)));
+        tooltip.add(Component.literal("§dFirmware: §f" + fw));
+        tooltip.add(Component.literal("§6Listening Port: §f" + port + " §8(Wireless Only)"));
+        tooltip.add(Component.literal("§bDevice ID: §f" + (flag.isAdvanced() && id != null ? id : shortId)));
     }
 }

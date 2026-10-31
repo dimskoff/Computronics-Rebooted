@@ -1,12 +1,7 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/cube_top",
   "textures": {
-    "particle": "computronics:block/noteblock",
-    "north": "computronics:block/noteblock",
-    "south": "computronics:block/machine_side",
-    "east": "computronics:block/machine_side",
-    "west": "computronics:block/machine_side",
-    "up": "computronics:block/noteblock",
-    "down": "computronics:block/machine_bottom"
+    "top": "computronics:block/machine_top",
+    "side": "computronics:block/noteblock"
   }
 }
