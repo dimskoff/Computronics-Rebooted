@@ -17,7 +17,7 @@ public class EnvironmentCardBoom extends AbstractManagedEnvironment {
     public EnvironmentCardBoom(EnvironmentHost host) {
         this.host = host;
         setNode(Network.newNode(this, Visibility.Neighbors)
-                .withComponent("boom", Visibility.Neighbors)
+                .withComponent("self_destruct", Visibility.Neighbors)
                 .create());
     }
 
@@ -42,6 +42,19 @@ public class EnvironmentCardBoom extends AbstractManagedEnvironment {
         if (world != null && !world.isClientSide) {
             world.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), power, Level.ExplosionInteraction.BLOCK);
         }
+    }
+
+    @Callback(doc = "function(time:number):boolean -- Starts fuse for time in seconds.")
+    public Object[] start(Context context, Arguments args) {
+        double seconds = args.checkDouble(0);
+        this.countdown = Math.max(1, (int) Math.round(seconds * 20.0));
+        return new Object[]{true};
+    }
+
+    @Callback(direct = true, doc = "function():number -- Gets remaining fuse time in seconds.")
+    public Object[] time(Context context, Arguments args) {
+        if (countdown < 0) return new Object[]{-1.0};
+        return new Object[]{countdown / 20.0};
     }
 
     @Callback(doc = "function([power:number]):boolean -- Detonates the self-destruct card immediately.")

@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 public class TileTapeDrive extends TileEntityComputronics {
     private ItemStack tapeStack = ItemStack.EMPTY;
     private String state = "STOPPED";
+    private float speed = 1.0f;
+    private float volume = 1.0f;
 
     public TileTapeDrive(BlockPos pos, BlockState state) {
         super(ModBlockEntities.TAPE_DRIVE.get(), pos, state);
@@ -178,6 +180,30 @@ public class TileTapeDrive extends TileEntityComputronics {
         return result(true);
     }
 
+    @Callback(direct = true, doc = "function():number -- Gets the playback speed.")
+    public Object[] getSpeed(Context context, Arguments args) {
+        return result((double) speed);
+    }
+
+    @Callback(doc = "function(speed:number):number -- Sets the playback speed (0.25 to 2.0).")
+    public Object[] setSpeed(Context context, Arguments args) {
+        this.speed = (float) Math.max(0.25, Math.min(args.checkDouble(0), 2.0));
+        setChanged();
+        return result((double) speed);
+    }
+
+    @Callback(direct = true, doc = "function():number -- Gets the playback volume.")
+    public Object[] getVolume(Context context, Arguments args) {
+        return result((double) volume);
+    }
+
+    @Callback(doc = "function(volume:number):number -- Sets the playback volume (0.0 to 1.0).")
+    public Object[] setVolume(Context context, Arguments args) {
+        this.volume = (float) Math.max(0.0, Math.min(args.checkDouble(0), 1.0));
+        setChanged();
+        return result((double) volume);
+    }
+
     @Override
     public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -185,6 +211,8 @@ public class TileTapeDrive extends TileEntityComputronics {
             tag.put("tape", tapeStack.save(registries));
         }
         tag.putString("state", state);
+        tag.putFloat("speed", speed);
+        tag.putFloat("volume", volume);
     }
 
     @Override
@@ -196,5 +224,7 @@ public class TileTapeDrive extends TileEntityComputronics {
             this.tapeStack = ItemStack.EMPTY;
         }
         this.state = tag.getString("state");
+        this.speed = tag.contains("speed") ? tag.getFloat("speed") : 1.0f;
+        this.volume = tag.contains("volume") ? tag.getFloat("volume") : 1.0f;
     }
 }

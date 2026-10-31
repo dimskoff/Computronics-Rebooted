@@ -1,4 +1,4 @@
---[[ basic self-destruction program
+﻿--[[ basic self-destruction program
 Author: Vexatos
 ]]
 local component = require("component")

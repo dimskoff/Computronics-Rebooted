@@ -1,4 +1,4 @@
---[[ tape program, provides basic tape modification and access tools
+﻿--[[ tape program, provides basic tape modification and access tools
 Authors: Bizzycola and Vexatos
 ]]
 local component = require("component")
