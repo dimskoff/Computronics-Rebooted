@@ -29,7 +29,6 @@ public class Computronics {
         modEventBus.addListener(this::commonSetup);
 
         // Register game event listeners
-        NeoForge.EVENT_BUS.register(RFJammerManager.INSTANCE);
         NeoForge.EVENT_BUS.register(TileChatBox.ChatEventHandler.INSTANCE);
     }
 
