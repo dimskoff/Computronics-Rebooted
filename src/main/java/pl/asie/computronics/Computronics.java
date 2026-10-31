@@ -35,6 +35,7 @@ public class Computronics {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerCapabilities);
+        modEventBus.addListener(this::enqueueIMC);
 
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             modEventBus.addListener(pl.asie.computronics.client.ComputronicsClient::onClientSetup);
@@ -50,6 +51,21 @@ public class Computronics {
             ComputronicsOCDrivers.init();
             LOGGER.info("Computronics: Rebooted OpenComputers drivers initialized successfully.");
         });
+    }
+
+    private void enqueueIMC(final net.neoforged.fml.event.lifecycle.InterModEnqueueEvent event) {
+        try {
+            net.neoforged.fml.InterModComms.sendTo("opencomputers", "registerItemCharge", () -> {
+                net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+                tag.putString("name", "Pocket Terminal");
+                tag.putString("canCharge", "pl.asie.computronics.item.ItemPocketTerminal.canChargeStatic");
+                tag.putString("charge", "pl.asie.computronics.item.ItemPocketTerminal.chargeStatic");
+                return tag;
+            });
+            LOGGER.info("Computronics: Enqueued IMC registerItemCharge to OpenComputers");
+        } catch (Throwable t) {
+            LOGGER.warn("Computronics: Failed to enqueue IMC to OpenComputers: {}", t.getMessage());
+        }
     }
 
     private void registerCapabilities(final RegisterCapabilitiesEvent event) {

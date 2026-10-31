@@ -148,7 +148,7 @@ public class PocketTerminalRenderer {
         boolean active = tag.getBoolean("active");
         double energy = tag.getDouble("energy");
         int port = tag.contains("port") ? tag.getInt("port") : ItemPocketTerminal.DEFAULT_PORT;
-        String title = tag.contains("title") ? tag.getString("title") : "VRAM PAGER";
+        String title = tag.contains("title") ? tag.getString("title") : "POCKET TERMINAL";
         String fw = tag.contains("firmware") ? tag.getString("firmware") : "EEPROM v2.0";
 
         Font font = Minecraft.getInstance().font;

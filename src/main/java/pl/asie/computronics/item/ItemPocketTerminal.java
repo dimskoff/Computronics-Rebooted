@@ -45,7 +45,18 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         if (!simulate && toAdd > 0) {
             setCharge(stack, current + toAdd);
         }
-        return toAdd;
+        return amount - toAdd;
+    }
+
+    public static boolean canChargeStatic(ItemStack stack) {
+        return stack != null && stack.getItem() instanceof ItemPocketTerminal;
+    }
+
+    public static double chargeStatic(ItemStack stack, double amount, boolean simulate) {
+        if (stack != null && stack.getItem() instanceof ItemPocketTerminal terminal) {
+            return terminal.charge(stack, amount, simulate);
+        }
+        return amount;
     }
 
     public static double getCharge(ItemStack stack) {
@@ -116,7 +127,7 @@ public class ItemPocketTerminal extends Item implements Chargeable {
                 tag.putString("firmware", "Micro-Kernel v2.0");
                 tag.putInt("fg_col", 0x00FF66);
                 tag.putInt("bg_col", 0x08150A);
-                tag.putString("title", "WIRELESS VRAM PAGER");
+                tag.putString("title", "POCKET TERMINAL");
             });
             return newId;
         }
@@ -149,28 +160,12 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         ItemStack stack = player.getItemInHand(hand);
         getOrCreateTerminalId(stack);
 
-        // Microcontroller EEPROM Flashing (Sneak + Right Click with EEPROM in offhand or hand)
-        ItemStack offhand = player.getOffhandItem();
-        if (player.isShiftKeyDown() && !offhand.isEmpty() && offhand.getItem().getDescriptionId().toLowerCase().contains("eeprom")) {
-            if (!level.isClientSide()) {
-                String eepromName = offhand.getHoverName().getString();
-                CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-                    tag.putString("firmware", eepromName);
-                    tag.putString("line_0", "== BOOT: " + (eepromName.length() > 18 ? eepromName.substring(0, 18) : eepromName) + " ==");
-                    tag.putString("line_1", "Firmware flashed successfully.");
-                });
-                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.8f, 1.6f);
-                player.displayClientMessage(Component.literal("§a[VRAM Pager] §fFlashed microcontroller firmware from " + eepromName).withStyle(ChatFormatting.GREEN), true);
-            }
-            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-        }
-
         if (!level.isClientSide()) {
             boolean active = isActive(stack);
             double charge = getCharge(stack);
 
             if (!active && charge <= 0.0) {
-                player.displayClientMessage(Component.literal("§c[VRAM Pager: No Charge - Place on Inductive Charger Pad]").withStyle(ChatFormatting.RED), true);
+                player.displayClientMessage(Component.literal("§c[Pocket Terminal: Battery Depleted - Recharge in Charger]").withStyle(ChatFormatting.RED), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.5f);
                 return InteractionResultHolder.sidedSuccess(stack, false);
             }
@@ -184,10 +179,10 @@ public class ItemPocketTerminal extends Item implements Chargeable {
 
             if (newActive) {
                 int pct = (int) Math.round(charge / MAX_CHARGE * 100.0);
-                player.displayClientMessage(Component.literal("§a[VRAM Pager: ON | Port " + port + " | ID: " + shortId + " | " + pct + "%]").withStyle(ChatFormatting.GREEN), true);
+                player.displayClientMessage(Component.literal("§a[Pocket Terminal: ON | Port " + port + " | ID: " + shortId + " | " + pct + "%]").withStyle(ChatFormatting.GREEN), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.6f, 1.8f);
             } else {
-                player.displayClientMessage(Component.literal("§7[VRAM Pager: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
+                player.displayClientMessage(Component.literal("§7[Pocket Terminal: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.8f);
             }
         }
@@ -209,7 +204,7 @@ public class ItemPocketTerminal extends Item implements Chargeable {
                     if (newCharge <= 0.0) {
                         setActive(stack, false);
                         active = false;
-                        player.displayClientMessage(Component.literal("§c[VRAM Pager: Battery Depleted]").withStyle(ChatFormatting.RED), true);
+                        player.displayClientMessage(Component.literal("§c[Pocket Terminal: Battery Depleted]").withStyle(ChatFormatting.RED), true);
                     }
                 }
 

@@ -15,11 +15,17 @@
   "block.computronics.speech_box": "Speech Box",
   "block.computronics.entity_detector": "Entity Detector",
 
-  "item.computronics.pocket_terminal": "Wireless VRAM Pager",
-  "tooltip.computronics.pocket_terminal.desc1": "Compact handheld data display receiver with hardware 32x12 VRAM buffer.",
-  "tooltip.computronics.pocket_terminal.desc2": "Receives wireless commands only via OpenComputers wireless modem on a specific port.",
-  "tooltip.computronics.pocket_terminal.desc3": "Right-click toggles power. Sneak+Right-click with EEPROM flashes microcontroller firmware.",
+  "item.computronics.pocket_terminal": "Pocket Terminal",
+  "tooltip.computronics.pocket_terminal.desc1": "Compact handheld data terminal with hardware 32x12 VRAM display.",
+  "tooltip.computronics.pocket_terminal.desc2": "Receives wireless display rendering packets via OpenComputers wireless network cards.",
+  "tooltip.computronics.pocket_terminal.desc3": "Right-click toggles power. Can be recharged in OpenComputers Chargers.",
   "tooltip.computronics.entity_detector.desc": "High-precision directional entity and player scanner with configurable cone.",
+
+  "item.computronics.screwdriver": "Control Panel Screwdriver",
+  "tooltip.computronics.screwdriver.desc1": "Used to configure modular control panels, buttons, and lamps.",
+  "tooltip.computronics.screwdriver.desc2": "Right-click: Cycle element color preset.",
+  "tooltip.computronics.screwdriver.desc3": "Shift+Right-click: Cycle element size (1x1, 2x2, 3x3, 4x4).",
+  "tooltip.computronics.screwdriver.desc4": "Off-hand Name Tag: Apply custom text label onto the button cap.",
 
   "item.computronics.mini_lamp": "Miniature Indicator Lamp",
   "item.computronics.mini_button": "Tactile Push Button",

@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import pl.asie.computronics.init.ModBlockEntities;
@@ -29,6 +30,7 @@ import pl.asie.computronics.init.ModItems;
 import pl.asie.computronics.init.ModSounds;
 import pl.asie.computronics.item.ItemMiniButton;
 import pl.asie.computronics.item.ItemMiniLamp;
+import pl.asie.computronics.item.ItemScrewdriver;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,10 +48,16 @@ public class TileControlPanel extends TileEntityComputronics {
     }
 
     public static class PanelElement {
+        public int slot = 0;
         public ElementType type = ElementType.NONE;
-        public int color = 0x00FF00; // default green
+        public int color = 0xCC2020; // default red
         public boolean active = false;
         public int pressTicks = 0;
+        public long lastPressTime = 0;
+        public int size = 1; // 1, 2, 3, 4
+        public String label = "";
+        public int textColor = 0xFFFFFF;
+        public boolean bold = true;
     }
 
     private final PanelElement[] elements = new PanelElement[TOTAL_SLOTS];
@@ -58,20 +66,25 @@ public class TileControlPanel extends TileEntityComputronics {
         super(ModBlockEntities.CONTROL_PANEL.get(), pos, state);
         for (int i = 0; i < TOTAL_SLOTS; i++) {
             elements[i] = new PanelElement();
+            elements[i].slot = i;
         }
         node = Network.newNode(this, Visibility.Network)
                 .withComponent("control_panel", Visibility.Network)
                 .create();
     }
 
-    public Direction getFacing() {
-        if (getBlockState().hasProperty(BlockStateProperties.FACING)) {
-            return getBlockState().getValue(BlockStateProperties.FACING);
-        }
+    public Direction getHorizontalFacing() {
         if (getBlockState().hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             return getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
         }
         return Direction.NORTH;
+    }
+
+    public boolean isTopHalf() {
+        if (getBlockState().hasProperty(BlockStateProperties.HALF)) {
+            return getBlockState().getValue(BlockStateProperties.HALF) == Half.TOP;
+        }
+        return false;
     }
 
     @Override
@@ -84,82 +97,87 @@ public class TileControlPanel extends TileEntityComputronics {
                     if (level != null) {
                         level.playSound(null, worldPosition, ModSounds.BUTTON_RELEASE.get(), SoundSource.BLOCKS, 0.7f, 1.0f);
                     }
-                    setChanged();
-                    if (level != null && !level.isClientSide) {
-                        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                    }
+                    markChangedAndSync();
                 }
             }
         }
     }
 
-    private int getSlotIndex(int x, int y) {
+    public void markChangedAndSync() {
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public int getSlotIndex(int x, int y) {
         x = Math.max(0, Math.min(x, GRID_SIZE - 1));
         y = Math.max(0, Math.min(y, GRID_SIZE - 1));
         return y * GRID_SIZE + x;
     }
 
-    private int parseSlot(Arguments args) {
-        if (args.count() >= 2 && args.isInteger(1)) {
-            int x = args.checkInteger(0);
-            int y = args.checkInteger(1);
-            return getSlotIndex(x, y);
+    public PanelElement findRootElement(int gx, int gy) {
+        int slot = getSlotIndex(gx, gy);
+        if (elements[slot].type != ElementType.NONE) {
+            return elements[slot];
         }
-        int index = args.checkInteger(0);
-        return Math.floorMod(index - 1, TOTAL_SLOTS);
+        for (int i = 0; i < TOTAL_SLOTS; i++) {
+            PanelElement e = elements[i];
+            if (e.type != ElementType.NONE && e.size > 1) {
+                int ex = i % GRID_SIZE;
+                int ey = i / GRID_SIZE;
+                if (gx >= ex && gx < ex + e.size && gy >= ey && gy < ey + e.size) {
+                    return e;
+                }
+            }
+        }
+        return null;
     }
 
-    private int[] calculateGridPos(BlockHitResult hit) {
-        Direction facing = getFacing();
-        if (hit.getDirection() != facing) {
-            return null; // clicked a side other than the front panel
-        }
+    public boolean resizeElement(PanelElement elem, int newSize) {
+        int ex = elem.slot % GRID_SIZE;
+        int ey = elem.slot / GRID_SIZE;
+        int maxSize = Math.min(4, Math.min(GRID_SIZE - ex, GRID_SIZE - ey));
+        newSize = Math.max(1, Math.min(newSize, maxSize));
+        elem.size = newSize;
+        markChangedAndSync();
+        return true;
+    }
 
-        Vec3 loc = hit.getLocation();
+    public int[] calculateGridPos(Vec3 loc) {
+        Direction facing = getHorizontalFacing();
+
         double lx = Math.max(0.0, Math.min(0.999, loc.x - worldPosition.getX()));
-        double ly = Math.max(0.0, Math.min(0.999, loc.y - worldPosition.getY()));
         double lz = Math.max(0.0, Math.min(0.999, loc.z - worldPosition.getZ()));
 
         double u;
         double v;
 
         switch (facing) {
-            case UP -> {
-                u = lx;
-                v = lz;
-            }
-            case DOWN -> {
-                u = lx;
-                v = lz;
-            }
-            case NORTH -> {
-                u = lx;
-                v = 1.0 - ly;
-            }
-            case SOUTH -> {
-                u = 1.0 - lx;
-                v = 1.0 - ly;
-            }
-            case WEST -> {
-                u = 1.0 - lz;
-                v = 1.0 - ly;
-            }
-            case EAST -> {
-                u = lz;
-                v = 1.0 - ly;
-            }
-            default -> {
-                u = 0.5;
-                v = 0.5;
-            }
+            case NORTH -> { u = lx; v = lz; }
+            case SOUTH -> { u = 1.0 - lx; v = 1.0 - lz; }
+            case WEST  -> { u = 1.0 - lz; v = lx; }
+            case EAST  -> { u = lz; v = 1.0 - lx; }
+            default    -> { u = lx; v = lz; }
         }
 
-        int gx = (int) (u * GRID_SIZE);
-        int gy = (int) (v * GRID_SIZE);
+        int gx = Math.max(0, Math.min(GRID_SIZE - 1, (int) (u * GRID_SIZE)));
+        int gy = Math.max(0, Math.min(GRID_SIZE - 1, (int) (v * GRID_SIZE)));
         return new int[]{gx, gy};
     }
 
+    public int[] calculateGridPos(BlockHitResult hit) {
+        return calculateGridPos(hit.getLocation());
+    }
+
     public ItemInteractionResult onInteractWithItem(Player player, InteractionHand hand, BlockHitResult hit) {
+        ItemStack held = player.getItemInHand(hand);
+
+        // Screwdriver has its own UseOnContext handler
+        if (held.getItem() instanceof ItemScrewdriver) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+
         int[] grid = calculateGridPos(hit);
         if (grid == null) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
@@ -168,38 +186,52 @@ public class TileControlPanel extends TileEntityComputronics {
         int gx = grid[0];
         int gy = grid[1];
         int slot = getSlotIndex(gx, gy);
-        ItemStack held = player.getItemInHand(hand);
 
         if (held.getItem() instanceof ItemMiniLamp) {
-            if (elements[slot].type == ElementType.NONE) {
+            PanelElement existing = findRootElement(gx, gy);
+            if (existing == null) {
                 elements[slot].type = ElementType.LAMP;
-                elements[slot].color = 0x00FF00;
+                elements[slot].color = 0x20CC40; // Green
                 elements[slot].active = true;
+                elements[slot].size = 1;
+                elements[slot].label = "";
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.5f);
-                setChanged();
-                if (level != null && !level.isClientSide) {
-                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                }
-                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fInstalled Mini Lamp at (%d, %d) [Slot #%d]", gx, gy, slot + 1)), true);
+                markChangedAndSync();
+                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fInstalled Mini Lamp at (%d, %d)", gx, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         } else if (held.getItem() instanceof ItemMiniButton) {
-            if (elements[slot].type == ElementType.NONE) {
+            PanelElement existing = findRootElement(gx, gy);
+            if (existing == null) {
                 elements[slot].type = ElementType.BUTTON;
+                elements[slot].color = 0xCC2020; // Red
                 elements[slot].active = false;
+                elements[slot].size = 1;
+                elements[slot].label = "";
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.2f);
-                setChanged();
-                if (level != null && !level.isClientSide) {
-                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                }
-                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fInstalled Mini Button at (%d, %d) [Slot #%d]", gx, gy, slot + 1)), true);
+                markChangedAndSync();
+                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fInstalled Mini Button at (%d, %d)", gx, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         }
 
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    public boolean mountElementAt(int gx, int gy, ElementType type, int color) {
+        if (gx < 0 || gx >= GRID_SIZE || gy < 0 || gy >= GRID_SIZE) return false;
+        PanelElement existing = findRootElement(gx, gy);
+        if (existing != null) return false;
+        int slot = getSlotIndex(gx, gy);
+        elements[slot].type = type;
+        elements[slot].color = color;
+        elements[slot].active = (type == ElementType.LAMP);
+        elements[slot].size = 1;
+        elements[slot].label = "";
+        markChangedAndSync();
+        return true;
     }
 
     public InteractionResult onInteractEmptyHand(Player player, BlockHitResult hit) {
@@ -210,182 +242,43 @@ public class TileControlPanel extends TileEntityComputronics {
 
         int gx = grid[0];
         int gy = grid[1];
-        int slot = getSlotIndex(gx, gy);
-        PanelElement elem = elements[slot];
+        PanelElement elem = findRootElement(gx, gy);
 
         if (player.isShiftKeyDown()) {
-            // Shift-Click: Remove element and drop item
-            if (elem.type == ElementType.LAMP) {
-                elem.type = ElementType.NONE;
-                elem.active = false;
+            if (elem != null && elem.type != ElementType.NONE) {
+                // Shift-Click: Cycle size (1x1 -> 2x2 -> 3x3 -> 4x4 -> 1x1)
+                int newSize = (elem.size % 4) + 1;
+                resizeElement(elem, newSize);
                 if (level != null) {
-                    Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, new ItemStack(ModItems.MINI_LAMP.get()));
-                    level.playSound(null, worldPosition, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 1.0f);
-                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                    level.playSound(null, worldPosition, SoundEvents.ITEM_FRAME_ROTATE_ITEM, SoundSource.BLOCKS, 0.8f, 1.2f);
                 }
-                setChanged();
-                player.displayClientMessage(Component.literal(String.format("§c[Control Panel] §fDismantled Mini Lamp at (%d, %d)", gx, gy)), true);
-                return InteractionResult.SUCCESS;
-            } else if (elem.type == ElementType.BUTTON) {
-                elem.type = ElementType.NONE;
-                elem.active = false;
-                if (level != null) {
-                    Containers.dropItemStack(level, worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, new ItemStack(ModItems.MINI_BUTTON.get()));
-                    level.playSound(null, worldPosition, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 1.0f);
-                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-                }
-                setChanged();
-                player.displayClientMessage(Component.literal(String.format("§c[Control Panel] §fDismantled Mini Button at (%d, %d)", gx, gy)), true);
+                player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fResized component to §b%dx%d", newSize, newSize)), true);
                 return InteractionResult.SUCCESS;
             }
         } else {
             // Normal click
-            if (elem.type == ElementType.BUTTON) {
+            if (elem != null && elem.type == ElementType.BUTTON) {
                 elem.pressTicks = 10;
+                elem.lastPressTime = System.currentTimeMillis();
                 if (level != null) {
                     level.playSound(null, worldPosition, ModSounds.BUTTON_PRESS.get(), SoundSource.BLOCKS, 0.85f, 1.0f);
-                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                    markChangedAndSync();
                 }
                 if (node != null) {
-                    node.sendToReachable("computer.signal", "panel_button", slot + 1, player.getName().getString(), gx, gy);
+                    int rx = elem.slot % GRID_SIZE;
+                    int ry = elem.slot / GRID_SIZE;
+                    node.sendToReachable("computer.signal", "panel_button", elem.slot + 1, player.getName().getString(), rx, ry);
                 }
-                setChanged();
-                player.displayClientMessage(Component.literal(String.format("§6[Control Panel] §fPressed Button at (%d, %d) [Slot #%d]", gx, gy, slot + 1)), true);
+                player.displayClientMessage(Component.literal(String.format("§6[Control Panel] §fPressed Button #%d %s", elem.slot + 1, elem.label.isEmpty() ? "" : "(" + elem.label + ")")), true);
                 return InteractionResult.SUCCESS;
-            } else if (elem.type == ElementType.LAMP) {
+            } else if (elem != null && elem.type == ElementType.LAMP) {
                 String colorHex = String.format("#%06X", elem.color);
-                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMini Lamp (%d, %d): %s (Color: %s)", gx, gy, elem.active ? "ON" : "OFF", colorHex)), true);
+                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMini Lamp: %s (Color: %s)", elem.active ? "ON" : "OFF", colorHex)), true);
                 return InteractionResult.SUCCESS;
             }
         }
 
         return InteractionResult.PASS;
-    }
-
-    // =========================================================================
-    // OpenComputers Callbacks
-    // =========================================================================
-
-    @Callback(direct = true, doc = "function():number -- Gets the grid dimension (8 for 8x8).")
-    public Object[] getGridSize(Context context, Arguments args) {
-        return new Object[]{GRID_SIZE};
-    }
-
-    @Callback(doc = "function(indexOrX:number[, y:number], color:number):boolean -- Sets miniature lamp RGB color.")
-    public Object[] setLampColor(Context context, Arguments args) {
-        int slot;
-        int color;
-        if (args.count() >= 3) {
-            slot = getSlotIndex(args.checkInteger(0), args.checkInteger(1));
-            color = args.checkInteger(2);
-        } else {
-            slot = Math.floorMod(args.checkInteger(0) - 1, TOTAL_SLOTS);
-            color = args.checkInteger(1);
-        }
-        elements[slot].color = color & 0xFFFFFF;
-        elements[slot].active = (color != 0);
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-        return new Object[]{true};
-    }
-
-    @Callback(doc = "function(indexOrX:number[, y:number], state:boolean):boolean -- Toggles miniature lamp on/off.")
-    public Object[] setLamp(Context context, Arguments args) {
-        int slot;
-        boolean state;
-        if (args.count() >= 3) {
-            slot = getSlotIndex(args.checkInteger(0), args.checkInteger(1));
-            state = args.checkBoolean(2);
-        } else {
-            slot = Math.floorMod(args.checkInteger(0) - 1, TOTAL_SLOTS);
-            state = args.checkBoolean(1);
-        }
-        elements[slot].active = state;
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-        return new Object[]{true};
-    }
-
-    @Callback(direct = true, doc = "function(indexOrX:number[, y:number]):number -- Gets miniature lamp color.")
-    public Object[] getLampColor(Context context, Arguments args) {
-        int slot = parseSlot(args);
-        return new Object[]{elements[slot].color};
-    }
-
-    @Callback(direct = true, doc = "function(indexOrX:number[, y:number]):boolean -- Checks if lamp is currently on.")
-    public Object[] isLampActive(Context context, Arguments args) {
-        int slot = parseSlot(args);
-        return new Object[]{elements[slot].active};
-    }
-
-    @Callback(doc = "function(indexOrX:number[, y:number]):boolean -- Software button press.")
-    public Object[] pressButton(Context context, Arguments args) {
-        int slot = parseSlot(args);
-        elements[slot].pressTicks = 10;
-        int gx = slot % GRID_SIZE;
-        int gy = slot / GRID_SIZE;
-        if (level != null) {
-            level.playSound(null, worldPosition, ModSounds.BUTTON_PRESS.get(), SoundSource.BLOCKS, 0.85f, 1.0f);
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-        if (node != null) {
-            node.sendToReachable("computer.signal", "panel_button", slot + 1, "SYSTEM", gx, gy);
-        }
-        setChanged();
-        return new Object[]{true};
-    }
-
-    @Callback(direct = true, doc = "function(indexOrX:number[, y:number]):boolean -- Checks if button is currently pressed.")
-    public Object[] isButtonPressed(Context context, Arguments args) {
-        int slot = parseSlot(args);
-        return new Object[]{elements[slot].pressTicks > 0};
-    }
-
-    @Callback(direct = true, doc = "function():table -- Returns all installed components on the panel.")
-    public Object[] getElements(Context context, Arguments args) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (int i = 0; i < TOTAL_SLOTS; i++) {
-            if (elements[i].type != ElementType.NONE) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("index", i + 1);
-                map.put("x", i % GRID_SIZE);
-                map.put("y", i / GRID_SIZE);
-                map.put("type", elements[i].type.name().toLowerCase());
-                map.put("active", elements[i].active);
-                map.put("color", elements[i].color);
-                map.put("pressed", elements[i].pressTicks > 0);
-                result.add(map);
-            }
-        }
-        return new Object[]{result};
-    }
-
-    @Callback(doc = "function():boolean -- Clears and turns off all miniature lamps.")
-    public Object[] clear(Context context, Arguments args) {
-        for (int i = 0; i < TOTAL_SLOTS; i++) {
-            elements[i].active = false;
-        }
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        }
-        return new Object[]{true};
-    }
-
-    public boolean mountElementAt(int gx, int gy, ElementType type, int color) {
-        int slot = getSlotIndex(gx, gy);
-        if (elements[slot].type == ElementType.NONE) {
-            elements[slot].type = type;
-            elements[slot].color = color;
-            elements[slot].active = (type == ElementType.LAMP);
-            sync();
-            return true;
-        }
-        return false;
     }
 
     public PanelElement getElement(int slot) {
@@ -395,11 +288,127 @@ public class TileControlPanel extends TileEntityComputronics {
         return null;
     }
 
-    public void sync() {
-        setChanged();
-        if (level != null && !level.isClientSide()) {
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    // =========================================================================
+    // OpenComputers Callbacks
+    // =========================================================================
+
+    @Callback(direct = true, doc = "function():number -- Gets grid dimension (8).")
+    public Object[] getGridSize(Context context, Arguments args) {
+        return new Object[]{GRID_SIZE};
+    }
+
+    @Callback(doc = "function(x:number, y:number, color:number):boolean -- Sets miniature lamp RGB color.")
+    public Object[] setLampColor(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        int color = args.checkInteger(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null && elem.type == ElementType.LAMP) {
+            elem.color = color & 0xFFFFFF;
+            elem.active = (color != 0);
+            markChangedAndSync();
+            return new Object[]{true};
         }
+        return new Object[]{false, "no lamp at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number, state:boolean):boolean -- Toggles miniature lamp on/off.")
+    public Object[] setLamp(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        boolean state = args.checkBoolean(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null && elem.type == ElementType.LAMP) {
+            elem.active = state;
+            markChangedAndSync();
+            return new Object[]{true};
+        }
+        return new Object[]{false, "no lamp at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number):boolean -- Software button press.")
+    public Object[] pressButton(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null && elem.type == ElementType.BUTTON) {
+            elem.pressTicks = 10;
+            elem.lastPressTime = System.currentTimeMillis();
+            if (level != null) {
+                level.playSound(null, worldPosition, ModSounds.BUTTON_PRESS.get(), SoundSource.BLOCKS, 0.85f, 1.0f);
+                markChangedAndSync();
+            }
+            if (node != null) {
+                int rx = elem.slot % GRID_SIZE;
+                int ry = elem.slot / GRID_SIZE;
+                node.sendToReachable("computer.signal", "panel_button", elem.slot + 1, "SYSTEM", rx, ry);
+            }
+            return new Object[]{true};
+        }
+        return new Object[]{false, "no button at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number, size:number):boolean -- Sets component size (1-4).")
+    public Object[] setElementSize(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        int size = args.checkInteger(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null) {
+            return new Object[]{resizeElement(elem, size)};
+        }
+        return new Object[]{false, "no element at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number, label:string[, textColor:number, bold:boolean]):boolean -- Sets button text label.")
+    public Object[] setButtonLabel(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        String label = args.checkString(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null) {
+            elem.label = label;
+            if (args.count() >= 4) elem.textColor = args.checkInteger(3);
+            if (args.count() >= 5) elem.bold = args.checkBoolean(4);
+            markChangedAndSync();
+            return new Object[]{true};
+        }
+        return new Object[]{false, "no element at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number, color:number):boolean -- Sets button/lamp base color.")
+    public Object[] setElementColor(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        int color = args.checkInteger(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null) {
+            elem.color = color & 0xFFFFFF;
+            markChangedAndSync();
+            return new Object[]{true};
+        }
+        return new Object[]{false, "no element at coordinates"};
+    }
+
+    @Callback(direct = true, doc = "function():table -- Returns all components on the panel.")
+    public Object[] getElements(Context context, Arguments args) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < TOTAL_SLOTS; i++) {
+            if (elements[i].type != ElementType.NONE) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("slot", i + 1);
+                map.put("x", i % GRID_SIZE);
+                map.put("y", i / GRID_SIZE);
+                map.put("type", elements[i].type.name().toLowerCase());
+                map.put("active", elements[i].active);
+                map.put("color", elements[i].color);
+                map.put("size", elements[i].size);
+                map.put("label", elements[i].label);
+                map.put("pressed", elements[i].pressTicks > 0);
+                result.add(map);
+            }
+        }
+        return new Object[]{result};
     }
 
     @Override
@@ -407,11 +416,6 @@ public class TileControlPanel extends TileEntityComputronics {
         CompoundTag tag = super.getUpdateTag(registries);
         saveAdditional(tag, registries);
         return tag;
-    }
-
-    @Override
-    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
-        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override
@@ -434,6 +438,10 @@ public class TileControlPanel extends TileEntityComputronics {
                 itemTag.putString("type", elements[i].type.name());
                 itemTag.putInt("color", elements[i].color);
                 itemTag.putBoolean("active", elements[i].active);
+                itemTag.putInt("size", elements[i].size);
+                itemTag.putString("label", elements[i].label);
+                itemTag.putInt("textColor", elements[i].textColor);
+                itemTag.putBoolean("bold", elements[i].bold);
                 list.add(itemTag);
             }
         }
@@ -446,6 +454,10 @@ public class TileControlPanel extends TileEntityComputronics {
         for (int i = 0; i < TOTAL_SLOTS; i++) {
             elements[i].type = ElementType.NONE;
             elements[i].active = false;
+            elements[i].size = 1;
+            elements[i].label = "";
+            elements[i].textColor = 0xFFFFFF;
+            elements[i].bold = true;
         }
         if (tag.contains("elements")) {
             ListTag list = tag.getList("elements", 10);
@@ -453,9 +465,14 @@ public class TileControlPanel extends TileEntityComputronics {
                 CompoundTag itemTag = list.getCompound(i);
                 int slot = itemTag.getInt("slot");
                 if (slot >= 0 && slot < TOTAL_SLOTS) {
+                    elements[slot].slot = slot;
                     elements[slot].type = ElementType.valueOf(itemTag.getString("type"));
                     elements[slot].color = itemTag.getInt("color");
                     elements[slot].active = itemTag.getBoolean("active");
+                    elements[slot].size = itemTag.contains("size") ? Math.max(1, Math.min(4, itemTag.getInt("size"))) : 1;
+                    elements[slot].label = itemTag.contains("label") ? itemTag.getString("label") : "";
+                    elements[slot].textColor = itemTag.contains("textColor") ? itemTag.getInt("textColor") : 0xFFFFFF;
+                    elements[slot].bold = !itemTag.contains("bold") || itemTag.getBoolean("bold");
                 }
             }
         }

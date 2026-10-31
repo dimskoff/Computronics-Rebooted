@@ -73,6 +73,9 @@ public class EnvironmentRackKVM extends ComponentConnectableRackMountableEnviron
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.7f, 1.2f + (selectedServer * 0.1f));
 
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    String.format("§b[Rack KVM] §fRouted peripheral focus to §aServer Channel #%d (Slot %d)", selectedServer + 1, selectedServer)), true);
+
             if (host instanceof Rack rack) {
                 rack.markChanged(rack.indexOfMountable(this));
             }

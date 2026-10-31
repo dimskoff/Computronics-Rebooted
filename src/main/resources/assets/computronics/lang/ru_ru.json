@@ -15,11 +15,17 @@
   "block.computronics.speech_box": "Голосовой блок (Speech Box)",
   "block.computronics.entity_detector": "Детектор сущностей",
 
-  "item.computronics.pocket_terminal": "Беспроводной VRAM-пейджер",
-  "tooltip.computronics.pocket_terminal.desc1": "Компактный приёмник данных с аппаратным VRAM-буфером 32x12.",
-  "tooltip.computronics.pocket_terminal.desc2": "Принимает команды только через беспроводную сетевую карту на выделенном порту.",
-  "tooltip.computronics.pocket_terminal.desc3": "ПКМ переключает питание. Shift+ПКМ с EEPROM прошивает микроконтроллер.",
+  "item.computronics.pocket_terminal": "Карманный терминал",
+  "tooltip.computronics.pocket_terminal.desc1": "Компактный ручной терминал с аппаратным VRAM-дисплеем 32x12.",
+  "tooltip.computronics.pocket_terminal.desc2": "Принимает пакеты отрисовки через беспроводную сетевую карту на выделенном порту.",
+  "tooltip.computronics.pocket_terminal.desc3": "ПКМ переключает питание. Заряжается в зарядном устройстве OpenComputers.",
   "tooltip.computronics.entity_detector.desc": "Высокоточный детектор игроков и сущностей с конусом направленного сканирования.",
+
+  "item.computronics.screwdriver": "Монтажная отвёртка",
+  "tooltip.computronics.screwdriver.desc1": "Используется для настройки модульных панелей, кнопок и ламп.",
+  "tooltip.computronics.screwdriver.desc2": "ПКМ: Смена цветовой схемы элемента.",
+  "tooltip.computronics.screwdriver.desc3": "Shift+ПКМ: Изменение размера элемента (1x1, 2x2, 3x3, 4x4).",
+  "tooltip.computronics.screwdriver.desc4": "Ярлык в левой руке: Нанесение текста на крышку кнопки.",
 
   "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
   "item.computronics.mini_button": "Тактильная кнопка управления",

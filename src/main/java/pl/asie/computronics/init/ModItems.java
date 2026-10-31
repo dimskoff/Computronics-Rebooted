@@ -51,6 +51,8 @@ public class ModItems {
             () -> new ItemMiniLamp(new Item.Properties()));
     public static final DeferredItem<ItemMiniButton> MINI_BUTTON = ITEMS.register("mini_button",
             () -> new ItemMiniButton(new Item.Properties()));
+    public static final DeferredItem<pl.asie.computronics.item.ItemScrewdriver> SCREWDRIVER = ITEMS.register("screwdriver",
+            () -> new pl.asie.computronics.item.ItemScrewdriver(new Item.Properties()));
 
     // Server Rack Mountable Boards
     public static final DeferredItem<ItemRackLightBoard> RACK_BOARD_LIGHT = ITEMS.register("rack_board_light",

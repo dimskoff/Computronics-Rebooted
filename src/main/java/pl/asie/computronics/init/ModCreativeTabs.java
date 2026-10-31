@@ -35,6 +35,7 @@ public class ModCreativeTabs {
 
                         // Handhelds, Modular Elements & Cards
                         output.accept(ModItems.POCKET_TERMINAL.get());
+                        output.accept(ModItems.SCREWDRIVER.get());
                         output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.MINI_BUTTON.get());
                         output.accept(ModItems.NETWORK_CARD_3.get());
