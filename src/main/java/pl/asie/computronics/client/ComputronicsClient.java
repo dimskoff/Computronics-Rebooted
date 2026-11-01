@@ -4,6 +4,7 @@ import li.cil.oc.api.Manual;
 import li.cil.oc.api.manual.PathProvider;
 import li.cil.oc.api.prefab.ItemStackTabIconRenderer;
 import li.cil.oc.api.prefab.ResourceContentProvider;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.BlockItem;
@@ -29,6 +30,7 @@ public class ComputronicsClient {
             try {
                 NeoForge.EVENT_BUS.register(PocketTerminalRenderer.INSTANCE);
                 NeoForge.EVENT_BUS.register(RackMountableRenderer.INSTANCE);
+                NeoForge.EVENT_BUS.register(ComputronicsClient.class);
 
                 Manual.addProvider(new ResourceContentProvider("computronics", "doc/"));
                 Manual.addTab(
@@ -126,5 +128,50 @@ public class ComputronicsClient {
                 Computronics.LOGGER.warn("Computronics: Could not initialize client systems: {}", t.getMessage());
             }
         });
+    }
+
+    @net.neoforged.bus.api.SubscribeEvent
+    public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) return;
+
+        ItemStack main = mc.player.getMainHandItem();
+        ItemStack off = mc.player.getOffhandItem();
+        boolean holdingScrewdriver = (main.getItem() instanceof ItemScrewdriver) || (off.getItem() instanceof ItemScrewdriver);
+        if (!holdingScrewdriver) return;
+
+        if (mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult bhr) {
+            BlockPos pos = bhr.getBlockPos();
+            BlockState state = mc.level.getBlockState(pos);
+            if (state.getBlock() instanceof pl.asie.computronics.block.BlockControlPanel) {
+                if (mc.level.getBlockEntity(pos) instanceof pl.asie.computronics.block.entity.TileControlPanel panel) {
+                    int[] grid = pl.asie.computronics.block.BlockControlPanel.calculateGrid(state, pos, bhr.getLocation());
+                    if (grid != null) {
+                        int gx = grid[0];
+                        int gy = grid[1];
+                        pl.asie.computronics.block.entity.TileControlPanel.PanelElement elem = panel.findRootElement(gx, gy);
+                        String msg;
+                        if (elem != null && elem.type != pl.asie.computronics.block.entity.TileControlPanel.ElementType.NONE) {
+                            String typeStr = elem.type.name();
+                            int slot1 = elem.slot + 1;
+                            String extra = "";
+                            if (elem.type == pl.asie.computronics.block.entity.TileControlPanel.ElementType.BUTTON && !elem.label.isEmpty()) {
+                                extra = " §7| Label: '§f" + elem.label + "§7'";
+                            } else if (elem.type == pl.asie.computronics.block.entity.TileControlPanel.ElementType.SWITCH) {
+                                extra = " §7| State: " + (elem.active ? "§a[ON]" : "§c[OFF]");
+                            } else if (elem.type == pl.asie.computronics.block.entity.TileControlPanel.ElementType.SEVEN_SEGMENT) {
+                                extra = " §7| Val: §b\"" + elem.displayValue + "\"";
+                            }
+                            msg = String.format("§b[Screwdriver] §fSlot: §e#%d §7(X:%d, Y:%d) §7| Type: §6%s §7| Size: §d%dx%d%s",
+                                    slot1, elem.slot % 8, elem.slot / 8, typeStr, elem.sizeX, elem.sizeY, extra);
+                        } else {
+                            int slot1 = gy * 8 + gx + 1;
+                            msg = String.format("§7[Screwdriver] Grid: (X:%d, Y:%d) -> Slot #%d [Empty]", gx, gy, slot1);
+                        }
+                        mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(msg), true);
+                    }
+                }
+            }
+        }
     }
 }

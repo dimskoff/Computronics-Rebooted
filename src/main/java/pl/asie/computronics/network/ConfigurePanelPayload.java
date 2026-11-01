@@ -15,7 +15,8 @@ public record ConfigurePanelPayload(
         BlockPos pos,
         int slot,
         int color,
-        int size,
+        int sizeX,
+        int sizeY,
         String label,
         int textColor,
         boolean bold,
@@ -36,6 +37,7 @@ public record ConfigurePanelPayload(
                 buf.readVarInt(),
                 buf.readInt(),
                 buf.readVarInt(),
+                buf.readVarInt(),
                 buf.readUtf(),
                 buf.readInt(),
                 buf.readBoolean(),
@@ -47,7 +49,8 @@ public record ConfigurePanelPayload(
         buf.writeBlockPos(pos);
         buf.writeVarInt(slot);
         buf.writeInt(color);
-        buf.writeVarInt(size);
+        buf.writeVarInt(sizeX);
+        buf.writeVarInt(sizeY);
         buf.writeUtf(label != null ? label : "");
         buf.writeInt(textColor);
         buf.writeBoolean(bold);
@@ -64,8 +67,8 @@ public record ConfigurePanelPayload(
             if (context.player() instanceof ServerPlayer player) {
                 Level level = player.level();
                 if (level.isLoaded(payload.pos()) && level.getBlockEntity(payload.pos()) instanceof TileControlPanel panel) {
-                    panel.configureElement(payload.slot(), payload.color(), payload.size(), payload.label(),
-                            payload.textColor(), payload.bold(), payload.displayValue());
+                    panel.configureElement(payload.slot(), payload.color(), payload.sizeX(), payload.sizeY(),
+                            payload.label(), payload.textColor(), payload.bold(), payload.displayValue());
                 }
             }
         });

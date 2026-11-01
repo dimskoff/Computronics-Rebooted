@@ -51,6 +51,8 @@ public class ModItems {
             () -> new ItemMiniLamp(new Item.Properties()));
     public static final DeferredItem<ItemMiniButton> MINI_BUTTON = ITEMS.register("mini_button",
             () -> new ItemMiniButton(new Item.Properties()));
+    public static final DeferredItem<ItemToggleSwitch> TOGGLE_SWITCH = ITEMS.register("toggle_switch",
+            () -> new ItemToggleSwitch(new Item.Properties()));
     public static final DeferredItem<pl.asie.computronics.item.ItemSevenSegment> SEVEN_SEGMENT = ITEMS.register("seven_segment",
             () -> new pl.asie.computronics.item.ItemSevenSegment(new Item.Properties()));
     public static final DeferredItem<pl.asie.computronics.item.ItemScrewdriver> SCREWDRIVER = ITEMS.register("screwdriver",

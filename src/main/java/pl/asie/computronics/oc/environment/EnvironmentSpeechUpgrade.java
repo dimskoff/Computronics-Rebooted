@@ -7,6 +7,7 @@ import li.cil.oc.api.machine.Context;
 import li.cil.oc.api.network.EnvironmentHost;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.AbstractManagedEnvironment;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -92,13 +93,9 @@ public class EnvironmentSpeechUpgrade extends AbstractManagedEnvironment {
             this.phonemeQueue.add(c);
         }
 
-        AABB range = new AABB(host.xPosition() - 32, host.yPosition() - 32, host.zPosition() - 32,
-                host.xPosition() + 32, host.yPosition() + 32, host.zPosition() + 32);
-        List<ServerPlayer> players = sl.getEntitiesOfClass(ServerPlayer.class, range);
-        Component msg = Component.literal("§6[Robot Speech] §f" + text);
-        for (ServerPlayer player : players) {
-            player.displayClientMessage(msg, false);
-        }
+        BlockPos hostPos = new BlockPos((int) host.xPosition(), (int) host.yPosition(), (int) host.zPosition());
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(sl, new net.minecraft.world.level.ChunkPos(hostPos),
+                new pl.asie.computronics.network.SpeechBoxPayload(hostPos, text, basePitch, volume));
 
         return new Object[]{true};
     }

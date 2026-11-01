@@ -102,14 +102,11 @@ public class TileSpeechBox extends TileEntityComputronics {
             this.phonemeQueue.add(c);
         }
 
-        // Subtitle broadcast within 32 blocks
+        // Broadcast real TTS to nearby players within 32 blocks
         if (level instanceof ServerLevel sl) {
-            AABB range = new AABB(worldPosition).inflate(32.0);
-            List<ServerPlayer> players = sl.getEntitiesOfClass(ServerPlayer.class, range);
-            Component msg = Component.literal("§b[Speech Box] §f" + text);
-            for (ServerPlayer player : players) {
-                player.displayClientMessage(msg, false);
-            }
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(sl, new net.minecraft.world.level.ChunkPos(worldPosition),
+                    new pl.asie.computronics.network.SpeechBoxPayload(worldPosition, text, basePitch, volume));
+            level.playSound(null, worldPosition, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, 0.4f, 1.2f);
         }
 
         return new Object[]{true};

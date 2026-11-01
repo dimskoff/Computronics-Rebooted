@@ -54,7 +54,7 @@ public class ItemSevenSegment extends Item {
             if (level.isClientSide()) {
                 player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.4f);
             } else {
-                player.displayClientMessage(Component.literal(String.format("§b[7-Segment Display] §fPlacement size: §6%dx%d", next, next)), true);
+                player.displayClientMessage(Component.literal(String.format("§b[7-Segment Display] §fРазмер модуля: §61x%d §7(%d цифры)", next, next)), true);
             }
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
@@ -74,23 +74,20 @@ public class ItemSevenSegment extends Item {
             if (be instanceof TileControlPanel panel) {
                 int[] grid = BlockControlPanel.calculateGrid(state, pos, context.getClickLocation());
                 if (grid != null) {
-                    if (!level.isClientSide()) {
-                        int size = getPlacementSize(stack);
-                        if (panel.mountElementWithSize(grid[0], grid[1], TileControlPanel.ElementType.SEVEN_SEGMENT, 0x00FFCC, size)) {
-                            if (player != null && !player.isCreative()) {
-                                stack.shrink(1);
-                            }
-                            level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.4f);
-                            if (player != null) {
-                                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %dx%d 7-Segment Display at (%d, %d)", size, size, grid[0], grid[1])), true);
-                            }
-                        } else {
-                            if (player != null) {
-                                player.displayClientMessage(Component.literal("§c[Control Panel] Cannot fit element here (overlap or out of bounds)!"), true);
-                            }
+                    int digits = getPlacementSize(stack); // 1, 2, 3, or 4
+                    if (panel.mountElementWithSize(grid[0], grid[1], TileControlPanel.ElementType.SEVEN_SEGMENT, 0x00FFCC, digits, 1)) {
+                        if (player != null && !player.isCreative()) {
+                            stack.shrink(1);
                         }
+                        level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.4f);
+                        if (player != null) {
+                            player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fУстановлен цифровой индикатор 1x%d (%d цифры) в (%d, %d)", digits, digits, grid[0], grid[1])), true);
+                        }
+                        return InteractionResult.sidedSuccess(level.isClientSide());
+                    } else if (player != null && !level.isClientSide()) {
+                        player.displayClientMessage(Component.literal("§c[Control Panel] Недостаточно места для модуля 1x" + digits + "!"), true);
                     }
-                    return InteractionResult.sidedSuccess(level.isClientSide());
+                    return InteractionResult.CONSUME;
                 }
             }
         }
@@ -99,9 +96,11 @@ public class ItemSevenSegment extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        int size = getPlacementSize(stack);
+        super.appendHoverText(stack, context, tooltip, flag);
+        int digits = getPlacementSize(stack);
         tooltip.add(Component.translatable("tooltip.computronics.seven_segment.desc1").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.computronics.seven_segment.desc2").withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.add(Component.literal("Configured Size: " + size + "x" + size + " (Sneak+R-Click to change)").withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("tooltip.computronics.seven_segment.desc2").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Размер модуля: §e1x" + digits + " §7(" + digits + " " + (digits == 1 ? "цифра" : (digits < 5 ? "цифры" : "цифр")) + ")").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.literal("Shift + ПКМ: сменить размер (1x1, 1x2, 1x3, 1x4)").withStyle(ChatFormatting.YELLOW));
     }
 }

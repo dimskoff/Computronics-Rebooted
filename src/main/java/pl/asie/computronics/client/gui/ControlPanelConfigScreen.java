@@ -18,7 +18,8 @@ public class ControlPanelConfigScreen extends Screen {
     private final TileControlPanel.PanelElement elem;
 
     private int selectedColor;
-    private int selectedSize;
+    private int selectedSizeX;
+    private int selectedSizeY;
     private int selectedTextColor;
     private boolean bold;
     private String labelText;
@@ -55,7 +56,8 @@ public class ControlPanelConfigScreen extends Screen {
         this.elem = panel.getElement(slot);
 
         this.selectedColor = elem != null ? elem.color : 0xCC2020;
-        this.selectedSize = elem != null ? elem.size : 1;
+        this.selectedSizeX = elem != null ? Math.max(1, elem.sizeX) : 1;
+        this.selectedSizeY = elem != null ? Math.max(1, elem.sizeY) : 1;
         this.selectedTextColor = elem != null ? elem.textColor : 0xFFFFFF;
         this.bold = elem == null || elem.bold;
         this.labelText = elem != null && elem.label != null ? elem.label : "";
@@ -106,15 +108,32 @@ public class ControlPanelConfigScreen extends Screen {
         }).bounds(left + 200, top + 35, 70, 16).build();
         addRenderableWidget(boldBtn);
 
-        // Size Buttons
-        for (int sz = 1; sz <= 4; sz++) {
-            final int s = sz;
-            int btnX = left + 75 + (sz - 1) * 38;
-            int btnY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 110 : 90);
-            Button sizeBtn = Button.builder(Component.literal(s + "x" + s), b -> {
-                selectedSize = s;
-            }).bounds(btnX, btnY, 34, 16).build();
-            addRenderableWidget(sizeBtn);
+        // Size / Digit Buttons
+        if (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
+            // Horizontal multi-digit 7-segment display: 1x1, 1x2, 1x3, 1x4
+            for (int digits = 1; digits <= 4; digits++) {
+                final int d = digits;
+                int btnX = left + 75 + (digits - 1) * 38;
+                int btnY = top + 110;
+                Button sizeBtn = Button.builder(Component.literal("1x" + d), b -> {
+                    selectedSizeX = d;
+                    selectedSizeY = 1;
+                }).bounds(btnX, btnY, 34, 16).build();
+                addRenderableWidget(sizeBtn);
+            }
+        } else {
+            // Square buttons / lamps / switches: 1x1, 2x2, 3x3, 4x4
+            int maxS = (elem != null && elem.type == TileControlPanel.ElementType.SWITCH) ? 2 : 4;
+            for (int sz = 1; sz <= maxS; sz++) {
+                final int s = sz;
+                int btnX = left + 75 + (sz - 1) * 38;
+                int btnY = top + 90;
+                Button sizeBtn = Button.builder(Component.literal(s + "x" + s), b -> {
+                    selectedSizeX = s;
+                    selectedSizeY = s;
+                }).bounds(btnX, btnY, 34, 16).build();
+                addRenderableWidget(sizeBtn);
+            }
         }
 
         // Color preset chips buttons
@@ -124,7 +143,7 @@ public class ControlPanelConfigScreen extends Screen {
             int chipX = left + 20 + (i % 6) * 42;
             int row = i / 6;
             int currentChipY = chipY + row * 18;
-            Button chip = Button.builder(Component.literal(" ■ "), b -> {
+            Button chip = Button.builder(Component.literal(""), b -> {
                 selectedColor = col;
                 hexColorEdit.setValue(String.format("#%06X", col & 0xFFFFFF));
             }).bounds(chipX, currentChipY, 36, 16).build();
@@ -141,6 +160,9 @@ public class ControlPanelConfigScreen extends Screen {
 
         Button removeBtn = Button.builder(Component.literal("Remove"), b -> {
             PacketDistributor.sendToServer(new RemovePanelElementPayload(panel.getBlockPos(), slot));
+            if (elem != null) {
+                elem.type = TileControlPanel.ElementType.NONE;
+            }
             onClose();
         }).bounds(left + 100, botY, 75, 20).build();
         addRenderableWidget(removeBtn);
@@ -154,11 +176,27 @@ public class ControlPanelConfigScreen extends Screen {
     private void applyAndClose() {
         String label = labelEdit.getValue();
         String disp = displayValueEdit != null ? displayValueEdit.getValue() : "";
+
+        // Immediate client local update
+        if (elem != null) {
+            elem.color = selectedColor;
+            elem.sizeX = selectedSizeX;
+            elem.sizeY = selectedSizeY;
+            elem.size = Math.max(selectedSizeX, selectedSizeY);
+            elem.label = label;
+            elem.bold = bold;
+            if (!disp.isEmpty()) {
+                elem.displayValue = disp;
+            }
+        }
+
+        // Sync to server via network packet
         PacketDistributor.sendToServer(new ConfigurePanelPayload(
                 panel.getBlockPos(),
                 slot,
                 selectedColor,
-                selectedSize,
+                selectedSizeX,
+                selectedSizeY,
                 label,
                 selectedTextColor,
                 bold,
@@ -194,7 +232,7 @@ public class ControlPanelConfigScreen extends Screen {
             g.drawString(font, "Value:", left + 20, top + 89, 0xA0AEC0, false);
         }
         int sizeY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 114 : 94);
-        g.drawString(font, "Size:", left + 20, sizeY, 0xA0AEC0, false);
+        g.drawString(font, (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? "Digits:" : "Size:"), left + 20, sizeY, 0xA0AEC0, false);
 
         // Color sample box
         g.fill(left + 140, top + 60, left + 175, top + 76, 0xFF000000 | selectedColor);
@@ -210,7 +248,7 @@ public class ControlPanelConfigScreen extends Screen {
         // Render preview inside
         if (elem != null && elem.type == TileControlPanel.ElementType.BUTTON) {
             int pColor = 0xFF000000 | selectedColor;
-            int btnBoxSize = Math.min(48, 16 * selectedSize);
+            int btnBoxSize = Math.min(48, 16 * selectedSizeX);
             int bx = prevX + (68 - btnBoxSize) / 2;
             int by = prevY + 16 + (48 - btnBoxSize) / 2;
             g.fill(bx, by, bx + btnBoxSize, by + btnBoxSize, pColor);
@@ -220,9 +258,16 @@ public class ControlPanelConfigScreen extends Screen {
                 int lw = font.width(lbl);
                 g.drawString(font, lbl, bx + (btnBoxSize - lw) / 2, by + (btnBoxSize - 8) / 2, 0xFFFFFFFF, bold);
             }
+        } else if (elem != null && elem.type == TileControlPanel.ElementType.SWITCH) {
+            int pColor = 0xFF000000 | selectedColor;
+            int bx = prevX + 22;
+            int by = prevY + 22;
+            g.fill(bx, by, bx + 24, by + 36, 0xFF282828);
+            g.renderOutline(bx, by, 24, 36, 0xFF707070);
+            g.fill(bx + 4, by + 4, bx + 20, by + 18, pColor); // toggle up
         } else if (elem != null && elem.type == TileControlPanel.ElementType.LAMP) {
             int pColor = 0xFF000000 | selectedColor;
-            int lampR = Math.min(22, 8 * selectedSize);
+            int lampR = Math.min(22, 8 * selectedSizeX);
             int lx = prevX + 34;
             int ly = prevY + 40;
             g.fill(lx - lampR, ly - lampR, lx + lampR, ly + lampR, pColor);
@@ -236,6 +281,16 @@ public class ControlPanelConfigScreen extends Screen {
         }
 
         super.render(g, mouseX, mouseY, partialTick);
+
+        // Overlay colored rectangles over the preset buttons so the player sees the colors
+        int chipY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 135 : 115);
+        for (int i = 0; i < PRESET_COLORS.length; i++) {
+            int chipX = left + 20 + (i % 6) * 42;
+            int row = i / 6;
+            int currentChipY = chipY + row * 18;
+            g.fill(chipX + 3, currentChipY + 3, chipX + 33, currentChipY + 13, 0xFF000000 | PRESET_COLORS[i]);
+            g.renderOutline(chipX + 2, currentChipY + 2, 32, 12, 0xFF000000);
+        }
     }
 
     @Override

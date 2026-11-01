@@ -52,27 +52,48 @@ public class EnvironmentRackKVM extends ComponentConnectableRackMountableEnviron
         if (!(rack instanceof li.cil.oc.common.blockentity.Rack rackEntity)) return;
 
         try {
+            int kvmSlot = rack.indexOfMountable(this);
             li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction>[][] mapping = rackEntity.nodeMapping();
-            Direction targetSide = lastConfiguredSide;
-            for (int s = 0; s < 4; s++) {
+            Direction targetSide = null;
+
+            // 1. Check what external side the KVM module itself is mapped to in the rack GUI
+            if (kvmSlot >= 0 && kvmSlot < mapping.length) {
                 for (int b = 0; b < 3; b++) {
-                    li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction> opt = mapping[s][b];
+                    li.cil.oc.internal.scalalib.Option<Direction> opt = mapping[kvmSlot][b];
                     if (opt != null && opt.isDefined()) {
                         targetSide = opt.get();
                         break;
                     }
                 }
-                if (targetSide != null) break;
+            }
+
+            // 2. Fallback: check any external side configured on other slots or remember last side
+            if (targetSide == null) {
+                targetSide = lastConfiguredSide;
+            }
+            if (targetSide == null) {
+                for (int s = 0; s < 4; s++) {
+                    for (int b = 0; b < 3; b++) {
+                        li.cil.oc.internal.scalalib.Option<Direction> opt = mapping[s][b];
+                        if (opt != null && opt.isDefined()) {
+                            targetSide = opt.get();
+                            break;
+                        }
+                    }
+                    if (targetSide != null) break;
+                }
             }
 
             if (targetSide == null) {
-                targetSide = net.minecraft.core.Direction.WEST;
+                targetSide = Direction.UP;
             }
             lastConfiguredSide = targetSide;
 
+            // 3. Connect selected server to targetSide on all 3 buses, disconnect other servers from targetSide
             for (int s = 0; s < 4; s++) {
+                if (s == kvmSlot) continue;
                 boolean active = (s == selectedServer);
-                li.cil.oc.internal.scalalib.Option<net.minecraft.core.Direction> opt = active
+                li.cil.oc.internal.scalalib.Option<Direction> opt = active
                         ? li.cil.oc.internal.scalalib.Option$.MODULE$.apply(targetSide)
                         : li.cil.oc.internal.scalalib.Option$.MODULE$.empty();
                 for (int b = 0; b < 3; b++) {

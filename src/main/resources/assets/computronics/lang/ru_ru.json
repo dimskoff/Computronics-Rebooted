@@ -30,6 +30,8 @@
   "item.computronics.mini_lamp": "Миниатюрная индикаторная лампа",
   "item.computronics.mini_button": "Тактильная кнопка управления",
   "item.computronics.seven_segment": "7-Сегментный цифровой индикатор",
+  "item.computronics.toggle_switch": "Тумблер переключатель для панели",
+  "tooltip.computronics.toggle_switch.desc": "Промышленный тумблер с фиксацией. Нажмите для включения/выключения.",
   "tooltip.computronics.seven_segment.desc1": "Монтируемый светодиодный цифровой семисегментный индикатор для панели.",
   "tooltip.computronics.seven_segment.desc2": "Настраивается через графический интерфейс отвёртки или OpenComputers API.",
   "item.computronics.card_beep": "Звуковая карта (Beep)",
