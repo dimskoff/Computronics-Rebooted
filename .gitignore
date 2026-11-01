@@ -1,15 +1,22 @@
 /*
 
 # folders
+!/.github
+!/.github/**
 !/docs
+!/docs/**
 !/gradle
 !/src
+!/scripts
 
 # files
 !/.gitignore
+!/LICENSE
 !/README.md
 !/build.gradle
 !/build.properties
+!/gradle.properties
+!/settings.gradle
 !/gradlew
 !/gradlew.bat
 !/changelog.md
