@@ -269,9 +269,9 @@ public class ControlPanelConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Prevent background world blur shader
-        if (this.minecraft != null && this.minecraft.gameRenderer != null) {
-            if (this.minecraft.gameRenderer.currentEffect() != null) {
+        // Prevent background world blur shader unless enabled in client config
+        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.enableScrewdriverGuiBlur.get()) {
+            if (this.minecraft != null && this.minecraft.gameRenderer != null && this.minecraft.gameRenderer.currentEffect() != null) {
                 this.minecraft.gameRenderer.shutdownEffect();
             }
         }

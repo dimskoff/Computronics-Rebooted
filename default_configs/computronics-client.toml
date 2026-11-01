@@ -1,0 +1,37 @@
+# ==============================================================================
+#                 COMPUTRONICS REBOOTED - CLIENT CONFIGURATION
+# ==============================================================================
+# Controls graphics, 3D first-person rendering, distance culling, audio, and UI.
+# ==============================================================================
+
+[rendering]
+	# Render the 3D widescreen tablet model when holding the Wireless Monitor in first-person view.
+	# If disabled, renders as a standard flat Minecraft item sprite.
+	renderHandheldWirelessMonitor = true
+
+	# Render 3D font text and labels on Modular Control Panels in the world.
+	# Disabling this can give a small FPS boost on very low-end hardware.
+	renderControlPanelWorldText = true
+
+	# Maximum distance in blocks to render 3D panel text (distance culling for FPS optimization).
+	# Range: 4 ~ 128
+	controlPanelTextRenderDistance = 32
+
+	# Render glowing dynamic LEDs and interactive switches on Server Racks.
+	renderRackOverlays = true
+
+	# Whether to enable background world blur when opening the Screwdriver configuration GUI.
+	# Set to false to keep the Minecraft world sharp and crisp behind the window. Default: false.
+	enableScrewdriverGuiBlur = false
+
+[audio]
+	# Client master volume multiplier for tape audio playback (0.0 to 1.0).
+	# Range: 0.0 ~ 1.0
+	tapeDriveMasterVolume = 1.0
+
+	# Client master volume multiplier for Speech Box robotic voices (0.0 to 2.0).
+	# Range: 0.0 ~ 2.0
+	speechBoxVolumeMultiplier = 1.0
+
+	# Spawn custom metal chime note particles around Iron Note Block when triggered.
+	ironNoteblockParticles = true

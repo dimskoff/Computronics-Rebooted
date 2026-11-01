@@ -1,0 +1,228 @@
+# ==============================================================================
+#                 COMPUTRONICS REBOOTED - SERVER & MECHANICS CONFIG
+# ==============================================================================
+# This configuration file controls all gameplay mechanics, peripherals, energy,
+# rate limits, buffers, and anti-griefing protections for servers and modpacks.
+# Changes in this file affect both dedicated servers and singleplayer worlds.
+# ==============================================================================
+
+[features]
+	# Granular feature toggles. Set to false to disable specific blocks, cards, or peripherals.
+	# If disabled, blocks and cards will reject software execution or will not tick.
+	enableControlPanel = true
+	enableChatBox = true
+	enableSpeechBox = true
+	enableTapeDrive = true
+	enableCamera = true
+	enableRadar = true
+	enableEntityDetector = true
+	enableAcousticSensor = true
+	enableWeatherStation = true
+	enableLaserTransceiver = true
+	enableRFJammer = true
+	enableInductiveCharger = true
+	enableAnalogGauge = true
+	enableIronNoteblock = true
+	enableWirelessMonitor = true
+	enableNetworkCardTier3 = true
+	enablePacketSniffer = true
+	enableCardBoom = true
+	enableCardBeep = true
+	enableCardFX = true
+	enableSpeechUpgrade = true
+	enableChatUpgrade = true
+	enableRadarUpgrade = true
+	enableCameraUpgrade = true
+	enableWinchUpgrade = true
+	enableRackLightBoard = true
+	enableRackSwitchBoard = true
+	enableRackCoProcessor = true
+	enableRackCapacitor = true
+	enableRackBoom = true
+
+[control_panel]
+	# Maximum number of text lines per button, lamp, or text component (1 to 8). Default: 4.
+	# Range: 1 ~ 8
+	panelMaxLines = 4
+
+	# Maximum allowed characters per line on a panel component. Default: 32.
+	# Range: 1 ~ 128
+	panelMaxCharactersPerLine = 32
+
+	# Allow players to customize RGB hex colors on panel elements. If false, colors are locked to defaults.
+	panelAllowCustomColors = true
+
+	# Rate limit: Maximum software update/render calls per second per control panel block.
+	# Protects the server tick rate from malicious while-true loops in Lua scripts. Default: 20.
+	# Range: 1 ~ 100
+	panelMaxUpdatesPerSecond = 20
+
+[chat_box]
+	# Maximum broadcast radius in blocks. Set to -1 for unlimited interdimensional reach. Default: 40.
+	# Range: -1 ~ 32767
+	chatBoxMaxDistance = 40
+
+	# Whether Chat Boxes are permitted to send messages across different dimensions.
+	chatBoxAllowInterdimensional = false
+
+	# Default name prefix displayed in Minecraft chat messages.
+	chatBoxDefaultPrefix = "[ChatBox]"
+
+	# Minimum tick cooldown between chat broadcasts per chat box (20 ticks = 1 second).
+	# Range: 0 ~ 1200
+	chatBoxCooldownTicks = 20
+
+[speech_box]
+	# Base audio volume for speech synthesis (0.0 to 2.0). Default: 1.0.
+	# Range: 0.0 ~ 2.0
+	speechBoxVolume = 1.0
+
+	# Maximum block radius where spoken words can be heard in the world. Default: 32.
+	# Range: 4 ~ 128
+	speechBoxMaxRange = 32
+
+	# Maximum number of characters allowed in a single speech synthesis call. Default: 120.
+	# Range: 1 ~ 500
+	speechBoxMaxTextLength = 120
+
+	# Cooldown in ticks between spoken phrases per speech box. Default: 40 (2 seconds).
+	# Range: 0 ~ 1200
+	speechBoxCooldownTicks = 40
+
+[radar]
+	# Maximum scanning radius in blocks for 3D Radar. Default: 32.
+	# Range: 4 ~ 128
+	radarMaxRadius = 32
+
+	# Energy cost per radar scan in OpenComputers EU. Default: 15.0.
+	# Range: 0.0 ~ 1000.0
+	radarEnergyCostPerScan = 15.0
+
+	# Cooldown in ticks between radar scans. Default: 20 ticks.
+	# Range: 0 ~ 600
+	radarScanCooldownTicks = 20
+
+	# Whether radar can detect other players in the world.
+	radarDetectPlayers = true
+
+	# Whether radar can detect living mobs and animals.
+	radarDetectMobs = true
+
+[entity_detector]
+	# Maximum forward detection cone range in blocks. Default: 16.
+	# Range: 2 ~ 64
+	entityDetectorMaxRange = 16
+
+	# Cooldown in ticks between detection sweeps. Default: 10 ticks.
+	# Range: 0 ~ 200
+	entityDetectorScanCooldownTicks = 10
+
+	# If true, returns exact coordinates. If false, returns distance only (anti-aimbot / PvP balance).
+	entityDetectorShowExactCoordinates = true
+
+[acoustic_sensor]
+	# Maximum vibration detection radius in blocks. Default: 32.
+	# Range: 4 ~ 64
+	acousticSensorMaxRadius = 32
+
+	# If true, ignores mobs and only triggers on player actions.
+	acousticSensorDetectPlayersOnly = false
+
+[tape_drive]
+	# Maximum listening radius for tape audio playback in blocks. Default: 24.
+	# Range: 4 ~ 128
+	tapeDriveAudioRadius = 24
+
+	# Audio streaming buffer size in milliseconds. Default: 750 ms.
+	# Range: 100 ~ 5000
+	tapeDriveBufferMs = 750
+
+	# Storage capacity of Iron Cassette Tape in minutes. Default: 4.
+	# Range: 1 ~ 60
+	tapeIronMinutes = 4
+
+	# Storage capacity of Gold Cassette Tape in minutes. Default: 8.
+	# Range: 1 ~ 120
+	tapeGoldMinutes = 8
+
+	# Storage capacity of Diamond Cassette Tape in minutes. Default: 16.
+	# Range: 1 ~ 240
+	tapeDiamondMinutes = 16
+
+	# Storage capacity of Nether Star Cassette Tape in minutes. Default: 32.
+	# Range: 1 ~ 480
+	tapeNetherStarMinutes = 32
+
+[networking]
+	# Maximum interference radius for RF Jammer in blocks. Default: 64.
+	# Range: 8 ~ 256
+	rfJammerMaxRange = 64
+
+	# Power consumption of RF Jammer in EU per second. Default: 20.0.
+	# Range: 0.0 ~ 1000.0
+	rfJammerEnergyPerSecond = 20.0
+
+	# Maximum packets captured per tick by Packet Sniffer to prevent memory overflow. Default: 100.
+	# Range: 10 ~ 10000
+	packetSnifferMaxPacketsPerTick = 100
+
+	# Maximum packet payload size for Tier 3 Network Card (Jumbo Frames) in bytes. Default: 65536.
+	# Range: 1024 ~ 262144
+	jumboFramesMaxPacketSize = 65536
+
+	# Maximum line-of-sight range for Laser Transceiver in blocks. Default: 64.
+	# Range: 8 ~ 256
+	laserMaxDistance = 64
+
+[self_destruct]
+	# CRITICAL SERVER PROTECTION:
+	# If false, self-destruct card explosion damages entities but will NEVER break or destroy world blocks.
+	cardBoomAllowBlockDamage = true
+
+	# Explosion power for computer Self-Destruct Card. Default: 3.5.
+	# Range: 0.5 ~ 12.0
+	cardBoomExplosionPower = 3.5
+
+	# Minimum fuse delay in ticks for Self-Destruct Card. Default: 20 ticks.
+	# Range: 0 ~ 1200
+	cardBoomFuseTicks = 20
+
+	# If false, server rack detonator damages entities but will NEVER break or destroy world blocks.
+	rackBoomAllowBlockDamage = true
+
+	# Explosion power for server rack Detonator Board. Default: 4.5.
+	# Range: 0.5 ~ 16.0
+	rackBoomExplosionPower = 4.5
+
+[wireless_monitor]
+	# Maximum internal battery capacity of Wireless Monitor in EU. Default: 20000.0.
+	# Range: 1000.0 ~ 500000.0
+	wirelessMonitorMaxEnergy = 20000.0
+
+	# Power consumption while active in EU per second. Default: 1.0.
+	# Range: 0.0 ~ 50.0
+	wirelessMonitorEnergyUsagePerSecond = 1.0
+
+	# Default listening network port for Wireless Monitor. Default: 404.
+	# Range: 1 ~ 65535
+	wirelessMonitorDefaultPort = 404
+
+	# Allow flashing firmware onto the monitor via Shift+Right-Click with an EEPROM in offhand.
+	wirelessMonitorAllowEEPROMFlashing = true
+
+[server_rack]
+	# Energy storage capacity of Rack Capacitor Board in EU. Default: 50000.0.
+	# Range: 1000.0 ~ 1000000.0
+	rackCapacitorCapacity = 50000.0
+
+	# Energy cost per tick per active LED on Light Board. Default: 0.05.
+	# Range: 0.0 ~ 10.0
+	rackLightBoardEnergyPerTick = 0.05
+
+	# Crypto Co-Processor hashing speed multiplier (1.0 = standard, 2.0 = 2x faster). Default: 1.0.
+	# Range: 0.1 ~ 10.0
+	rackCoProcessorSpeedMultiplier = 1.0
+
+	# Tick cooldown between switch_flipped signals per switch. Default: 5 ticks.
+	# Range: 0 ~ 100
+	rackSwitchBoardSignalCooldown = 5

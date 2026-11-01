@@ -54,7 +54,10 @@ public class EnvironmentRackBoomBoard extends ComponentConnectableRackMountableE
     private void explode() {
         Level level = host.getEnvironmentLevel();
         if (level != null && !level.isClientSide()) {
-            level.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), 4.5f, Level.ExplosionInteraction.BLOCK);
+            boolean blockDamage = pl.asie.computronics.config.ComputronicsConfig.SERVER.rackBoomAllowBlockDamage.get();
+            float confPower = pl.asie.computronics.config.ComputronicsConfig.SERVER.rackBoomExplosionPower.get().floatValue();
+            Level.ExplosionInteraction interaction = blockDamage ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.MOB;
+            level.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), confPower, interaction);
         }
     }
 

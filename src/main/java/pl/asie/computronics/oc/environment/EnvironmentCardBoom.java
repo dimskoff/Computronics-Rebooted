@@ -40,7 +40,10 @@ public class EnvironmentCardBoom extends AbstractManagedEnvironment {
     private void explode(float power) {
         Level world = host.getEnvironmentLevel();
         if (world != null && !world.isClientSide) {
-            world.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), power, Level.ExplosionInteraction.BLOCK);
+            boolean blockDamage = pl.asie.computronics.config.ComputronicsConfig.SERVER.cardBoomAllowBlockDamage.get();
+            float confPower = pl.asie.computronics.config.ComputronicsConfig.SERVER.cardBoomExplosionPower.get().floatValue();
+            Level.ExplosionInteraction interaction = blockDamage ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.MOB;
+            world.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), confPower > 0 ? confPower : power, interaction);
         }
     }
 

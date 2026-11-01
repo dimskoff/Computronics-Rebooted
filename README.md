@@ -9,6 +9,7 @@
   <a href="https://neoforged.net/"><img src="https://img.shields.io/badge/NeoForge-1.21.1-blue?style=flat-square" alt="NeoForge 1.21.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License"></a>
   <a href="docs/WIKI.md"><img src="https://img.shields.io/badge/Wiki-Documentation-orange?style=flat-square" alt="Documentation"></a>
+  <a href="docs/CONFIGURATION.md"><img src="https://img.shields.io/badge/Config-Guide-blueviolet?style=flat-square" alt="Config Guide"></a>
 </p>
 
 **Computronics: Rebooted** is the next-generation, high-performance port of the legendary **Computronics** mod for **Minecraft 1.21.1** powered by **NeoForge** and fully integrated with **OpenComputers (1.21.1 Modern Port)**.
@@ -18,7 +19,8 @@ Bringing industrial hardware, analog and digital audio streaming, physical tacti
 ---
 
 ## 📚 Complete Documentation
-For exhaustive hardware specifications, OpenComputers API callbacks, signals, and Lua examples, see our [**Official Wiki & Technical Reference**](docs/WIKI.md).
+* [**Official Wiki & Technical Reference**](docs/WIKI.md) — Exhaustive hardware specifications, OpenComputers API callbacks, signals, and Lua examples.
+* [**Modpack & Server Configuration Guide**](docs/CONFIGURATION.md) — Comprehensive guide to all server and client configuration options, anti-griefing, rate-limits, and performance tuning.
 
 ---
 
@@ -26,14 +28,14 @@ For exhaustive hardware specifications, OpenComputers API callbacks, signals, an
 
 ### 🎛️ Modular Control Panel System
 * **Ultra-thin Surface Mounting:** Mounts flat against floors, ceilings, and walls (2 voxels thick) with zero collision clipping or wall penetration.
-* **8×8 Tactile Grid (64 Slots):** Mount miniature tactile push buttons, RGB indicator lamps, toggle switches, 7-segment displays, and text labels anywhere on the grid.
+* **8×8 Tactile Grid (64 Slots):** Mount miniature tactile push buttons, toggle switches, RGB indicator lamps, 7-segment displays, and text labels anywhere on the grid.
 * **Tactile Mechanical Feedback:** Buttons physically depress into the panel when clicked, accompanied by realistic mechanical click audio (`button_press` / `button_release`).
-* **RGB Status Lamps:** Software-controlled multi-color LEDs with full-bright emissive rendering and customizable 3D text labels.
+* **RGB Status Lamps:** Software-controlled multi-color LEDs with full-bright emissive rendering and customizable 3D text labels (up to 4 lines with individual text color).
 * **Slanted 7-Segment Displays:** MicroTechnics-accurate proportions with trapezoid segments, italic slant (~6.3°), unlit segment acrylic traces, and multi-digit formats (`1x1`, `1x2`, `1x3`, `1x4`).
-* **Mountable Text Component (`ItemPanelText`):** Pure 3D text labels without bulky borders in sizes `1x1`, `2x1`, `4x1`, `8x1`, `2x2`, `4x2`.
+* **Mountable Text Component (`ItemPanelText`):** Pure 3D text labels without bulky borders in sizes `1x1`, `2x1`, `4x1`, `8x1`, `2x2`, `4x2`, supporting 4 multi-line rows and full RGB color picker.
 * **Screwdriver Tool (`ItemScrewdriver`):** 
   - **Left-Click:** Dismantles individual components under crosshair safely without breaking the block.
-  - **Right-Click:** Opens modern, dark-industrial 350×240 GUI with real-time preview and color swatches.
+  - **Right-Click:** Opens modern, dark-industrial 350×240 GUI with real-time preview, text editor, and color swatches.
   - **HUD Overlay:** Displays component slot ID, coordinates `(X, Y)`, and active status.
 * **Event System:** Dispatches `panel_button(slot, player, x, y)` and `panel_switch(slot, state, player, x, y)` signals directly over the OpenComputers network bus.
 
@@ -41,12 +43,12 @@ For exhaustive hardware specifications, OpenComputers API callbacks, signals, an
 * **Digital DFN Audio:** Streams 8-bit digital audio cassettes directly into Minecraft's sound engine.
 * **Animated Cassette Slot:** Inserting a cassette smoothly slides it deep into the mechanical chassis.
 * **Tape Operations:** Full support for `play`, `stop`, `pause`, `seek`, `rewind`, and raw 8-bit read/write streaming.
-* **Cassette Tapes:** Tiered from Iron (4 minutes), Gold (8 minutes), Diamond (32 minutes) up to Nether Star (128 minutes).
+* **Cassette Tapes:** Tiered from Iron (4 minutes), Gold (8 minutes), Diamond (16 minutes) up to Nether Star (32 minutes).
 
-### 📟 Wireless VRAM Pager / Pocket Terminal
-* **Ergonomic One-Handed First-Person Rendering:** Held naturally in the player's right hand like a map in a boat, with natural tilt and rock-solid view during movement.
-* **Dual-Layer Matrix CRT:** High-contrast retro green phosphor matrix display (32 columns × 12 rows text).
-* **Wireless Network Receiver:** Listens for telemetry packets sent over OpenComputers wireless network cards.
+### 📟 Wireless Monitor (Handheld Widescreen Tablet)
+* **Ergonomic One-Handed First-Person Rendering:** Held naturally in the player's right hand with natural 16:10 landscape proportions.
+* **Firmware Flashing:** Shift+Right-Click with an EEPROM in hand flashes boot firmware directly into the device.
+* **Wireless Telemetry & Control:** Listens for telemetry packets sent over OpenComputers wireless network cards.
 * **Inductive Charging:** Recharges wirelessly when placed above an Inductive Charger Pad.
 
 ### ⚡ Inductive Charger Pad
@@ -54,18 +56,18 @@ For exhaustive hardware specifications, OpenComputers API callbacks, signals, an
 
 ### 🖥️ Server Rack Infrastructure
 Computronics server rack modules plug directly into OpenComputers Server Racks:
-* **Light Board:** Customizable status LEDs on the rack chassis.
-* **Switch Board:** Physical toggle switches to direct network flows.
-* **Rack Capacitor:** High-density rack energy buffer.
+* **Light Board:** Customizable status LEDs on the rack chassis with 5 switchable modes (`NORMAL`, `INVERTED`, `OFF`, `ALL_ON`, `PULSE`).
+* **Switch Board:** 4 physical interactive toggle switches sending `switch_flipped(index, state)` events over OpenComputers network.
+* **Rack Capacitor:** High-density rack energy buffer (50,000 EU).
 * **Rack Cryptographic Co-Processor:** Hardware-accelerated MD5, SHA-256, CRC32, AES-128 cryptographic operations.
-* **Rack KVM Switch Module:** Interactive 4-channel KVM switch to toggle peripherals and keyboard/video streams between mounted servers.
+* **Rack Detonator (Self-Destruct):** Emergency controlled explosive self-destruct board with server-side anti-griefing block damage prevention toggle.
 
 ### 🗣️ Clean Text-to-Speech Engine
 * **Speech Box Block & Robot Upgrade:** Synthesizes clear narrator voice speech in Russian and English with zero annoying legacy phoneme beeps.
 
 ### 📷 Peripherals, Sensors & Defense Modules
 * **Camera:** 3D raycasting with distance measurements and block reflectance analysis.
-* **Chat Box:** Secure in-game chat reading and broadcasting.
+* **Chat Box:** Secure in-game chat reading and broadcasting with distance and dimension limits.
 * **Radar & Entity Detector:** Detect nearby entities, players, and coordinates.
 * **RF Jammer Card & Block:** Radio frequency interference module to jam wireless network packets within range.
 * **Laser Transceiver:** Optical line-of-sight high-bandwidth network bridges.

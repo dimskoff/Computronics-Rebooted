@@ -5,6 +5,8 @@
 !/.github/**
 !/docs
 !/docs/**
+!/default_configs
+!/default_configs/**
 !/releases
 !/releases/**
 !/gradle
@@ -31,3 +33,4 @@
 !/libs/APIs.zip
 !/libs/ic2classic-api.zip
 !/libs/asielib.jar
+

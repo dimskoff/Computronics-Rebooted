@@ -398,6 +398,7 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                                           AttachFace face, Direction facing,
                                           float cu1, float cv1, float cu2, float cv2, float h,
                                           String rawText, int textColor, boolean bold, float textScale) {
+        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderControlPanelWorldText.get()) return;
         if (rawText == null || rawText.trim().isEmpty()) return;
 
         // Multi-line support: split by \n or \r\n (up to 4 lines)

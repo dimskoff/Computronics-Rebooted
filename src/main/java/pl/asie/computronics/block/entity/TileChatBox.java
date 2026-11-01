@@ -54,9 +54,19 @@ public class TileChatBox extends TileEntityComputronics {
 
     @Callback(doc = "function(message:string[, distance:number, prefix:string]):boolean -- Broadcasts a chat message.")
     public Object[] say(Context context, Arguments args) {
+        if (!pl.asie.computronics.config.ComputronicsConfig.SERVER.enableChatBox.get()) {
+            return result(false, "chat box is disabled in server config");
+        }
+
         String message = args.checkString(0);
+        int maxDist = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxMaxDistance.get();
         int range = args.optInteger(1, this.distance);
-        String prefix = args.optString(2, this.customPrefix);
+        if (maxDist >= 0 && range > maxDist) {
+            range = maxDist;
+        }
+        boolean allowInterdim = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxAllowInterdimensional.get();
+        String defaultPrefix = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxDefaultPrefix.get();
+        String prefix = args.optString(2, this.customPrefix.equals("[ChatBox]") ? defaultPrefix : this.customPrefix);
 
         if (level instanceof ServerLevel serverLevel) {
             Component formatted = Component.literal(prefix + " ").withStyle(ChatFormatting.DARK_PURPLE)
@@ -68,7 +78,7 @@ public class TileChatBox extends TileEntityComputronics {
             double rangeSq = range * range;
 
             for (ServerPlayer player : serverLevel.getServer().getPlayerList().getPlayers()) {
-                if (player.level() == level) {
+                if (player.level() == level || allowInterdim) {
                     if (range <= 0 || player.distanceToSqr(x, y, z) <= rangeSq) {
                         player.sendSystemMessage(formatted);
                     }

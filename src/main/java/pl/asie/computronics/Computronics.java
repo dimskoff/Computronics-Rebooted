@@ -26,7 +26,9 @@ public class Computronics {
     public static final String MODID = "computronics";
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 
-    public Computronics(IEventBus modEventBus) {
+    public Computronics(IEventBus modEventBus, net.neoforged.fml.ModContainer container) {
+        pl.asie.computronics.config.ComputronicsConfig.register(container);
+
         ModBlocks.BLOCKS.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);

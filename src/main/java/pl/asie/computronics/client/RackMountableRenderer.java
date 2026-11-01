@@ -26,6 +26,7 @@ public class RackMountableRenderer {
 
     @SubscribeEvent
     public void onRackTextureOverride(RackMountableRenderEvent.Block event) {
+        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderRackOverlays.get()) return;
         if (event.rack == null) return;
         ItemStack stack = event.rack.getItem(event.mountable);
         if (stack.isEmpty()) return;
@@ -53,6 +54,7 @@ public class RackMountableRenderer {
 
     @SubscribeEvent
     public void onRackMountableRender(RackMountableRenderEvent.BlockEntity event) {
+        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderRackOverlays.get()) return;
         if (event.rack == null) return;
         ItemStack stack = event.rack.getItem(event.mountable);
         if (stack.isEmpty()) return;

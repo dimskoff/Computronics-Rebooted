@@ -34,12 +34,17 @@ public class TileRadar extends TileEntityComputronics {
 
     @Callback(doc = "function([radius:number]):table -- Returns a list of entities within range.")
     public Object[] getEntities(Context context, Arguments args) {
-        int radius = Math.min(args.optInteger(0, 16), MAX_RADIUS);
+        if (!pl.asie.computronics.config.ComputronicsConfig.SERVER.enableRadar.get() || !pl.asie.computronics.config.ComputronicsConfig.SERVER.radarDetectMobs.get()) {
+            return result(Collections.emptyList());
+        }
+
+        int maxR = pl.asie.computronics.config.ComputronicsConfig.SERVER.radarMaxRadius.get();
+        int radius = Math.min(args.optInteger(0, 16), maxR);
         if (radius <= 0) {
             return result(Collections.emptyList());
         }
 
-        double energyNeeded = radius * ENERGY_PER_BLOCK * 2;
+        double energyNeeded = (radius / (double) maxR) * pl.asie.computronics.config.ComputronicsConfig.SERVER.radarEnergyCostPerScan.get();
         if (connector() != null && !connector().tryChangeBuffer(-energyNeeded)) {
             return result(null, "not enough energy");
         }
@@ -75,12 +80,17 @@ public class TileRadar extends TileEntityComputronics {
 
     @Callback(doc = "function([radius:number]):table -- Returns a list of players within range.")
     public Object[] getPlayers(Context context, Arguments args) {
-        int radius = Math.min(args.optInteger(0, 16), MAX_RADIUS);
+        if (!pl.asie.computronics.config.ComputronicsConfig.SERVER.enableRadar.get() || !pl.asie.computronics.config.ComputronicsConfig.SERVER.radarDetectPlayers.get()) {
+            return result(Collections.emptyList());
+        }
+
+        int maxR = pl.asie.computronics.config.ComputronicsConfig.SERVER.radarMaxRadius.get();
+        int radius = Math.min(args.optInteger(0, 16), maxR);
         if (radius <= 0) {
             return result(Collections.emptyList());
         }
 
-        double energyNeeded = radius * ENERGY_PER_BLOCK;
+        double energyNeeded = (radius / (double) maxR) * pl.asie.computronics.config.ComputronicsConfig.SERVER.radarEnergyCostPerScan.get() * 0.5;
         if (connector() != null && !connector().tryChangeBuffer(-energyNeeded)) {
             return result(null, "not enough energy");
         }
@@ -112,6 +122,6 @@ public class TileRadar extends TileEntityComputronics {
 
     @Callback(direct = true, doc = "function():number -- Gets the maximum scanning radius.")
     public Object[] getMaxRadius(Context context, Arguments args) {
-        return result(MAX_RADIUS);
+        return result(pl.asie.computronics.config.ComputronicsConfig.SERVER.radarMaxRadius.get());
     }
 }

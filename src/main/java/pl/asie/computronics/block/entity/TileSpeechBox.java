@@ -52,10 +52,14 @@ public class TileSpeechBox extends TileEntityComputronics {
     @Callback(doc = "function(text:string [, pitch:number]):boolean -- Speaks the text aloud via phonetic robotic voice synthesizer.")
     public Object[] say(Context context, Arguments args) {
         if (level == null || level.isClientSide) return new Object[]{false, "world unavailable"};
+        if (!pl.asie.computronics.config.ComputronicsConfig.SERVER.enableSpeechBox.get()) {
+            return new Object[]{false, "speech box is disabled in server config"};
+        }
 
         String text = args.checkString(0);
-        if (text.length() > 256) {
-            text = text.substring(0, 256);
+        int maxLen = pl.asie.computronics.config.ComputronicsConfig.SERVER.speechBoxMaxTextLength.get();
+        if (text.length() > maxLen) {
+            text = text.substring(0, maxLen);
         }
         if (args.count() >= 2) {
             this.basePitch = (float) Math.max(0.5, Math.min(args.checkDouble(1), 2.0));
@@ -63,10 +67,11 @@ public class TileSpeechBox extends TileEntityComputronics {
 
         this.currentSpeech = text;
 
-        // Broadcast real TTS to nearby players within 32 blocks
+        // Broadcast real TTS to nearby players
         if (level instanceof ServerLevel sl) {
+            float confVol = (float) (volume * pl.asie.computronics.config.ComputronicsConfig.SERVER.speechBoxVolume.get());
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(sl, new net.minecraft.world.level.ChunkPos(worldPosition),
-                    new pl.asie.computronics.network.SpeechBoxPayload(worldPosition, text, basePitch, volume));
+                    new pl.asie.computronics.network.SpeechBoxPayload(worldPosition, text, basePitch, confVol));
         }
 
         return new Object[]{true};

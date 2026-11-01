@@ -31,6 +31,10 @@ public class PocketTerminalRenderer {
             return;
         }
 
+        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderHandheldWirelessMonitor.get()) {
+            return;
+        }
+
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty() || !(stack.getItem() instanceof ItemPocketTerminal)) {
             return;
