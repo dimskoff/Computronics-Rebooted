@@ -5,6 +5,8 @@
 !/.github/**
 !/docs
 !/docs/**
+!/releases
+!/releases/**
 !/gradle
 !/src
 !/scripts
