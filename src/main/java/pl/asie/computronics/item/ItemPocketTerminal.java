@@ -160,12 +160,26 @@ public class ItemPocketTerminal extends Item implements Chargeable {
         ItemStack stack = player.getItemInHand(hand);
         getOrCreateTerminalId(stack);
 
+        // Flash firmware if holding EEPROM in offhand or shift-clicking
+        ItemStack offhand = player.getOffhandItem();
+        if (player.isShiftKeyDown() && !offhand.isEmpty() && offhand.getItem().toString().toLowerCase().contains("eeprom")) {
+            String eepromName = offhand.getHoverName().getString();
+            CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
+                tag.putString("firmware", eepromName);
+            });
+            if (!level.isClientSide()) {
+                player.displayClientMessage(Component.literal("§a[Wireless Monitor] §fFlashed firmware from EEPROM: §e" + eepromName), true);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 0.8f, 1.4f);
+            }
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        }
+
         if (!level.isClientSide()) {
             boolean active = isActive(stack);
             double charge = getCharge(stack);
 
             if (!active && charge <= 0.0) {
-                player.displayClientMessage(Component.literal("§c[Pocket Terminal: Battery Depleted - Recharge in Charger]").withStyle(ChatFormatting.RED), true);
+                player.displayClientMessage(Component.literal("§c[Wireless Monitor: Battery Depleted - Recharge in Charger]").withStyle(ChatFormatting.RED), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.5f);
                 return InteractionResultHolder.sidedSuccess(stack, false);
             }
@@ -179,10 +193,10 @@ public class ItemPocketTerminal extends Item implements Chargeable {
 
             if (newActive) {
                 int pct = (int) Math.round(charge / MAX_CHARGE * 100.0);
-                player.displayClientMessage(Component.literal("§a[Pocket Terminal: ON | Port " + port + " | ID: " + shortId + " | " + pct + "%]").withStyle(ChatFormatting.GREEN), true);
+                player.displayClientMessage(Component.literal("§a[Wireless Monitor: ON | Port " + port + " | ID: " + shortId + " | " + pct + "%]").withStyle(ChatFormatting.GREEN), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.PLAYERS, 0.6f, 1.8f);
             } else {
-                player.displayClientMessage(Component.literal("§7[Pocket Terminal: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
+                player.displayClientMessage(Component.literal("§7[Wireless Monitor: STANDBY / OFF]").withStyle(ChatFormatting.GRAY), true);
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 0.6f, 0.8f);
             }
         }

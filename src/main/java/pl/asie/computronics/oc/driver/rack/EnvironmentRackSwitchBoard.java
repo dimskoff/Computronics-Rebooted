@@ -27,38 +27,64 @@ public class EnvironmentRackSwitchBoard extends ComponentConnectableRackMountabl
         this.host = host;
         setNode(Network.newNode(this, Visibility.Network)
                 .withComponent("switch_board", Visibility.Network)
+                .withConnector()
                 .create());
     }
 
-    @Callback(direct = true, doc = "function(index:number):boolean -- Gets state of a switch (0-3).")
+    private int resolveIndex(int input) {
+        if (input >= 1 && input <= 4) {
+            return input - 1;
+        } else if (input >= 0 && input < 4) {
+            return input;
+        }
+        return -1;
+    }
+
+    @Callback(direct = true, doc = "function(index:number):boolean -- Gets state of a switch (1-4).")
     public Object[] getSwitch(Context context, Arguments args) {
-        int index = args.checkInteger(0);
-        if (index >= 0 && index < switches.length) {
+        int index = resolveIndex(args.checkInteger(0));
+        if (index >= 0) {
             return new Object[]{switches[index]};
         }
         return new Object[]{null, "index out of range"};
     }
 
-    @Callback(doc = "function(index:number, state:boolean):boolean -- Sets state of a switch (0-3).")
+    @Callback(direct = true, doc = "function(index:number):boolean -- Alias for getSwitch.")
+    public Object[] isActive(Context context, Arguments args) {
+        return getSwitch(context, args);
+    }
+
+    @Callback(doc = "function(index:number, state:boolean):boolean -- Sets state of a switch (1-4).")
     public Object[] setSwitch(Context context, Arguments args) {
-        int index = args.checkInteger(0);
+        int index = resolveIndex(args.checkInteger(0));
+        if (index < 0) return new Object[]{false, "index out of range"};
         boolean state = args.checkBoolean(1);
-        if (index >= 0 && index < switches.length) {
+        if (switches[index] != state) {
             switches[index] = state;
-            if (host instanceof Rack rack) {
-                rack.markChanged(rack.indexOfMountable(this));
-            }
+            markRackDirty();
             if (node() != null) {
-                node().sendToReachable("computer.signal", "rack_switch", index, state);
+                node().sendToReachable("computer.signal", "switch_flipped", index + 1, state);
+                node().sendToReachable("computer.signal", "rack_switch", index + 1, state);
             }
             return new Object[]{true};
         }
-        return new Object[]{false, "index out of range"};
+        return new Object[]{false};
+    }
+
+    @Callback(doc = "function(index:number, state:boolean):boolean -- Alias for setSwitch.")
+    public Object[] setActive(Context context, Arguments args) {
+        return setSwitch(context, args);
     }
 
     @Callback(direct = true, doc = "function():number -- Gets total number of switches (4).")
     public Object[] getSwitchCount(Context context, Arguments args) {
         return new Object[]{switches.length};
+    }
+
+    private void markRackDirty() {
+        if (host instanceof Rack rack) {
+            rack.markChanged(rack.indexOfMountable(this));
+        }
     }
 
     @Override
@@ -80,12 +106,13 @@ public class EnvironmentRackSwitchBoard extends ComponentConnectableRackMountabl
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.6f, pitch);
 
-            if (host instanceof Rack rack) {
-                rack.markChanged(rack.indexOfMountable(this));
-            }
+            markRackDirty();
             if (node() != null) {
-                node().sendToReachable("computer.signal", "rack_switch", swIdx, switches[swIdx]);
+                node().sendToReachable("computer.signal", "switch_flipped", swIdx + 1, switches[swIdx]);
+                node().sendToReachable("computer.signal", "rack_switch", swIdx + 1, switches[swIdx]);
             }
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    String.format("§6[Switch Board] §fSwitch #%d: %s", swIdx + 1, switches[swIdx] ? "§a[ON]" : "§c[OFF]")), true);
         }
         return true;
     }

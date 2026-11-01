@@ -71,8 +71,6 @@ public class ModItems {
             () -> new ItemRackCapacitorBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final DeferredItem<pl.asie.computronics.item.rack.ItemRackCoProcessor> RACK_BOARD_CO_PROCESSOR = ITEMS.register("rack_board_co_processor",
             () -> new pl.asie.computronics.item.rack.ItemRackCoProcessor(new Item.Properties().rarity(Rarity.RARE)));
-    public static final DeferredItem<pl.asie.computronics.item.rack.ItemRackKVM> RACK_BOARD_KVM = ITEMS.register("rack_board_kvm",
-            () -> new pl.asie.computronics.item.rack.ItemRackKVM(new Item.Properties().rarity(Rarity.UNCOMMON)));
 
     // Hardware Cards & Upgrades
     public static final DeferredItem<ItemNetworkCardTier3> NETWORK_CARD_3 = ITEMS.register("network_card_3",

@@ -14,14 +14,13 @@ public class DriverRackMountable implements DriverItem {
                 || stack.getItem() == ModItems.RACK_BOARD_SWITCH.get()
                 || stack.getItem() == ModItems.RACK_BOARD_BOOM.get()
                 || stack.getItem() == ModItems.RACK_BOARD_CAPACITOR.get()
-                || stack.getItem() == ModItems.RACK_BOARD_CO_PROCESSOR.get()
-                || stack.getItem() == ModItems.RACK_BOARD_KVM.get();
+                || stack.getItem() == ModItems.RACK_BOARD_CO_PROCESSOR.get();
     }
 
     @Override
     public ManagedEnvironment createEnvironment(ItemStack stack, EnvironmentHost host) {
         if (stack.getItem() == ModItems.RACK_BOARD_LIGHT.get()) {
-            return new EnvironmentRackLightBoard(host);
+            return new EnvironmentRackLightBoard(host, pl.asie.computronics.item.rack.ItemRackLightBoard.getMode(stack));
         } else if (stack.getItem() == ModItems.RACK_BOARD_SWITCH.get()) {
             return new EnvironmentRackSwitchBoard(host);
         } else if (stack.getItem() == ModItems.RACK_BOARD_BOOM.get()) {
@@ -30,8 +29,6 @@ public class DriverRackMountable implements DriverItem {
             return new EnvironmentRackCapacitorBoard(host);
         } else if (stack.getItem() == ModItems.RACK_BOARD_CO_PROCESSOR.get()) {
             return new EnvironmentRackCoProcessor(host);
-        } else if (stack.getItem() == ModItems.RACK_BOARD_KVM.get()) {
-            return new EnvironmentRackKVM(host);
         }
         return null;
     }

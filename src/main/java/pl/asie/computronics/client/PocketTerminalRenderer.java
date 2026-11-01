@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -49,7 +48,7 @@ public class PocketTerminalRenderer {
 
         ps.pushPose();
 
-        // 1. Right Hand / Arm positioning (held like a one-handed map in a boat)
+        // 1. Right Hand / Arm positioning (matching OpenComputers widescreen tablet)
         float side = 1.0f; // Right hand
         ps.translate(side * 0.125f, -0.125f, 0.0f);
 
@@ -60,33 +59,33 @@ public class PocketTerminalRenderer {
             ps.popPose();
         }
 
-        // 2. Position handheld terminal in front of the right hand
+        // 2. Position handheld widescreen tablet in front of player's right hand
         ps.pushPose();
-        ps.translate(side * 0.51f, -0.08f + equip * -1.2f, -0.75f);
+        ps.translate(side * 0.52f, -0.10f + equip * -1.2f, -0.74f);
         float sqrtSwing = Mth.sqrt(swing);
         float sinSwing = Mth.sin(sqrtSwing * (float) Math.PI);
         ps.translate(
-                side * -0.5f * sinSwing,
-                0.4f * Mth.sin(sqrtSwing * (float) Math.PI * 2.0f) - 0.3f * sinSwing,
-                -0.3f * Mth.sin(swing * (float) Math.PI)
+                side * -0.45f * sinSwing,
+                0.35f * Mth.sin(sqrtSwing * (float) Math.PI * 2.0f) - 0.25f * sinSwing,
+                -0.25f * Mth.sin(swing * (float) Math.PI)
         );
-        ps.mulPose(Axis.XP.rotationDegrees(sinSwing * -45.0f));
-        ps.mulPose(Axis.YP.rotationDegrees(side * sinSwing * -30.0f));
+        ps.mulPose(Axis.XP.rotationDegrees(sinSwing * -40.0f));
+        ps.mulPose(Axis.YP.rotationDegrees(side * sinSwing * -25.0f));
 
-        // Natural ergonomic tilt facing the player
+        // Ergonomic 16:10 landscape tilt facing the player
         ps.mulPose(Axis.YP.rotationDegrees(180.0f));
         ps.mulPose(Axis.ZP.rotationDegrees(180.0f));
-        ps.mulPose(Axis.XP.rotationDegrees(-24.0f));
-        ps.mulPose(Axis.YP.rotationDegrees(12.0f));
+        ps.mulPose(Axis.XP.rotationDegrees(-26.0f));
+        ps.mulPose(Axis.YP.rotationDegrees(13.0f));
 
-        // Scale terminal model
-        ps.scale(0.0075f, 0.0075f, 0.0075f);
+        // Scale tablet model
+        ps.scale(0.0058f, 0.0058f, 0.0058f);
 
-        // Center on screen
-        ps.translate(-45.0f, -60.0f, 0.0f);
+        // Center widescreen 16:10 chassis (150 x 95)
+        ps.translate(-75.0f, -47.5f, 0.0f);
 
-        // 3. Render 3D Handheld Pager Chassis & Bezel
-        renderTerminalChassis(ps, buffer);
+        // 3. Render 3D Handheld Widescreen Tablet Chassis & Bezel (No antenna)
+        renderTabletChassis(ps, buffer);
 
         // 4. Render Active VRAM Screen Content
         renderScreen(stack, ps, buffer);
@@ -118,27 +117,22 @@ public class PocketTerminalRenderer {
         ps.popPose();
     }
 
-    private void renderTerminalChassis(PoseStack ps, MultiBufferSource buffer) {
+    private void renderTabletChassis(PoseStack ps, MultiBufferSource buffer) {
         VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.FONT_QUAD);
         Matrix4f pose = ps.last().pose();
 
-        // Outer Dark Industrial Chassis (width: 90, height: 120, depth: 8)
-        drawQuad(pose, vc, -6, -8, 96, 128, 2.0f, 28, 32, 38, 255);
-        drawQuad(pose, vc, -4, -6, 94, 126, 1.5f, 44, 50, 58, 255);
-
-        // Antenna stub at top right
-        drawQuad(pose, vc, 80, -22, 85, -8, 1.0f, 70, 78, 88, 255);
-        drawQuad(pose, vc, 79, -26, 86, -22, 1.2f, 190, 55, 55, 255); // Red rubber antenna cap
+        // Outer Dark Metallic Widescreen Chassis (width: 150, height: 95, depth: 3)
+        drawQuad(pose, vc, -5, -5, 155, 100, 2.0f, 24, 28, 34, 255);
+        drawQuad(pose, vc, -3, -3, 153, 98, 1.6f, 44, 50, 60, 255);
 
         // Recessed Screen Bezel
-        drawQuad(pose, vc, 2, 2, 88, 118, 1.0f, 16, 20, 24, 255);
+        drawQuad(pose, vc, 4, 4, 146, 91, 1.0f, 15, 18, 22, 255);
 
-        // Screen Background (Deep Dark Green Matrix CRT)
-        drawQuad(pose, vc, 4, 4, 86, 116, 0.5f, 8, 22, 12, 255);
+        // Screen Background (Deep Dark Terminal Surface)
+        drawQuad(pose, vc, 6, 6, 144, 89, 0.5f, 10, 16, 20, 255);
 
-        // Tactile Side Grip Bumpers
-        drawQuad(pose, vc, -8, 20, -5, 100, 1.8f, 20, 24, 28, 255);
-        drawQuad(pose, vc, 95, 20, 98, 100, 1.8f, 20, 24, 28, 255);
+        // Subtle Status LED in top bezel
+        drawQuad(pose, vc, 73, 1, 77, 3, 1.7f, 0, 255, 200, 255);
     }
 
     private void renderScreen(ItemStack stack, PoseStack ps, MultiBufferSource buffer) {
@@ -148,37 +142,37 @@ public class PocketTerminalRenderer {
         boolean active = tag.getBoolean("active");
         double energy = tag.getDouble("energy");
         int port = tag.contains("port") ? tag.getInt("port") : ItemPocketTerminal.DEFAULT_PORT;
-        String title = tag.contains("title") ? tag.getString("title") : "POCKET TERMINAL";
+        String title = tag.contains("title") ? tag.getString("title") : "WIRELESS MONITOR";
         String fw = tag.contains("firmware") ? tag.getString("firmware") : "EEPROM v2.0";
 
         Font font = Minecraft.getInstance().font;
 
         ps.pushPose();
-        ps.translate(6.0f, 6.0f, 0.0f);
-        ps.scale(0.85f, 0.85f, 1.0f);
+        ps.translate(9.0f, 9.0f, 0.0f);
+        ps.scale(0.82f, 0.82f, 1.0f);
 
         if (!active || energy <= 0) {
-            font.drawInBatch("● [OFFLINE]", 2.0f, 2.0f, 0x555555, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
-            font.drawInBatch("R-CLICK TO POWER ON", 2.0f, 16.0f, 0x444444, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
+            font.drawInBatch("● [OFFLINE - STANDBY]", 2.0f, 2.0f, 0x555555, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
+            font.drawInBatch("RIGHT-CLICK TO POWER ON", 2.0f, 16.0f, 0x444444, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
             ps.popPose();
             return;
         }
 
         // Status Header
-        font.drawInBatch(title, 2.0f, 2.0f, 0x00FF88, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
-        String status = String.format("P:%d %.0fEU", port, energy);
-        font.drawInBatch(status, 2.0f, 11.0f, 0x00CC66, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
+        font.drawInBatch(title, 2.0f, 2.0f, 0x00FFCC, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
+        String status = String.format("PORT:%d  %.0fEU", port, energy);
+        font.drawInBatch(status, 2.0f, 11.0f, 0x00CC88, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
 
         // Divider
-        font.drawInBatch("----------------", 2.0f, 18.0f, 0x006633, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
+        font.drawInBatch("------------------------------------", 2.0f, 18.0f, 0x006644, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
 
-        // 32x12 VRAM Matrix Display
+        // VRAM Matrix Display (up to 10 lines)
         CompoundTag vram = tag.getCompound("vram");
         int yOff = 26;
-        for (int line = 0; line < 12; line++) {
+        for (int line = 0; line < 10; line++) {
             String text = vram.getString("l_" + line);
             if (text.isEmpty()) continue;
-            int fg = vram.contains("c_" + line) ? vram.getInt("c_" + line) : 0x00FF66;
+            int fg = vram.contains("c_" + line) ? vram.getInt("c_" + line) : 0x00FF88;
             font.drawInBatch(text, 2.0f, yOff + (line * 8.5f), fg, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, 0x00F000F0);
         }
 

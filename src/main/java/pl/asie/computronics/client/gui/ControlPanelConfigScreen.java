@@ -18,31 +18,33 @@ public class ControlPanelConfigScreen extends Screen {
     private final TileControlPanel.PanelElement elem;
 
     private int selectedColor;
+    private int selectedTextColor;
     private int selectedSizeX;
     private int selectedSizeY;
-    private int selectedTextColor;
     private boolean bold;
-    private String labelText;
-    private String displayValueText;
 
-    private EditBox labelEdit;
-    private EditBox hexColorEdit;
+    private final EditBox[] lineEdits = new EditBox[4];
+    private EditBox hexBaseColorEdit;
+    private EditBox hexTextColorEdit;
     private EditBox displayValueEdit;
     private Button boldBtn;
 
-    private static final int[] PRESET_COLORS = {
-            0xCC2020, // Industrial Red
-            0x20CC40, // Neon Green
-            0x2080EE, // Terminal Blue
-            0xCCCC20, // Warning Amber / Yellow
-            0xCC7020, // Hazard Orange
-            0x8020CC, // Synth Purple
+    private static final int[] BASE_PRESETS = {
+            0xCC2020, // Red
+            0x20CC40, // Green
+            0x2080EE, // Blue
+            0xCCCC20, // Amber
+            0x00FFCC, // Cyan
+            0x383E48  // Dark Gunmetal
+    };
+
+    private static final int[] TEXT_PRESETS = {
+            0xFFFFFF, // Pure White
             0x00FFCC, // Cyber Cyan
-            0xCC2080, // Magenta
-            0xEEEEEE, // Industrial White
-            0x383E48, // Gunmetal Dark
-            0x60EE20, // Lime Green
-            0xEE4040  // Bright Coral
+            0xFFFF00, // Electric Yellow
+            0xFF4444, // Bright Coral
+            0x66FF66, // Lime
+            0x1A1A1A  // Charcoal Black
     };
 
     public static void open(TileControlPanel panel, int slot) {
@@ -56,20 +58,18 @@ public class ControlPanelConfigScreen extends Screen {
         this.elem = panel.getElement(slot);
 
         this.selectedColor = elem != null ? elem.color : 0xCC2020;
+        this.selectedTextColor = elem != null ? elem.textColor : 0xFFFFFF;
         this.selectedSizeX = elem != null ? Math.max(1, elem.sizeX) : 1;
         this.selectedSizeY = elem != null ? Math.max(1, elem.sizeY) : 1;
-        this.selectedTextColor = elem != null ? elem.textColor : 0xFFFFFF;
         this.bold = elem == null || elem.bold;
-        this.labelText = elem != null && elem.label != null ? elem.label : "";
-        this.displayValueText = elem != null && elem.displayValue != null ? elem.displayValue : "0";
     }
 
     @Override
     protected void init() {
         int cx = width / 2;
         int cy = height / 2;
-        int panelW = 350;
-        int panelH = 240;
+        int panelW = 380;
+        int panelH = 248;
         int left = cx - panelW / 2;
         int top = cy - panelH / 2;
 
@@ -78,30 +78,40 @@ public class ControlPanelConfigScreen extends Screen {
         boolean isLamp = elem != null && elem.type == TileControlPanel.ElementType.LAMP;
         boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
 
-        // Label / Text Input
+        // Split existing label into up to 4 lines
+        String existingLabel = elem != null && elem.label != null ? elem.label : "";
+        String[] lines = existingLabel.split("\\r?\\n");
+
         if (isText || isButton || isLamp) {
-            labelEdit = new EditBox(font, left + 55, top + 34, 115, 16, Component.literal("Text"));
-            labelEdit.setMaxLength(32);
-            labelEdit.setValue(labelText);
-            addRenderableWidget(labelEdit);
+            // 4 Line Input fields
+            int lineStartY = top + 30;
+            for (int i = 0; i < 4; i++) {
+                String val = (i < lines.length) ? lines[i] : "";
+                EditBox eb = new EditBox(font, left + 52, lineStartY + i * 18, 128, 15, Component.literal("Line " + (i + 1)));
+                eb.setMaxLength(32);
+                eb.setValue(val);
+                lineEdits[i] = eb;
+                addRenderableWidget(eb);
+            }
 
             boldBtn = Button.builder(Component.literal(bold ? "Bold: ON" : "Bold: OFF"), b -> {
                 bold = !bold;
                 b.setMessage(Component.literal(bold ? "Bold: ON" : "Bold: OFF"));
-            }).bounds(left + 175, top + 34, 55, 16).build();
+            }).bounds(left + 185, top + 30, 62, 15).build();
             addRenderableWidget(boldBtn);
         } else if (isSevenSeg) {
-            displayValueEdit = new EditBox(font, left + 55, top + 34, 115, 16, Component.literal("Value"));
+            displayValueEdit = new EditBox(font, left + 52, top + 30, 128, 16, Component.literal("Value"));
             displayValueEdit.setMaxLength(16);
-            displayValueEdit.setValue(displayValueText);
+            displayValueEdit.setValue(elem != null && elem.displayValue != null ? elem.displayValue : "0");
             addRenderableWidget(displayValueEdit);
         }
 
-        // Hex Color Input
-        hexColorEdit = new EditBox(font, left + 55, top + 56, 60, 16, Component.literal("Hex"));
-        hexColorEdit.setMaxLength(7);
-        hexColorEdit.setValue(String.format("#%06X", selectedColor & 0xFFFFFF));
-        hexColorEdit.setResponder(val -> {
+        // Base Color Row
+        int baseColY = (isText || isButton || isLamp) ? top + 106 : top + 54;
+        hexBaseColorEdit = new EditBox(font, left + 70, baseColY, 55, 14, Component.literal("Base Hex"));
+        hexBaseColorEdit.setMaxLength(7);
+        hexBaseColorEdit.setValue(String.format("#%06X", selectedColor & 0xFFFFFF));
+        hexBaseColorEdit.setResponder(val -> {
             try {
                 String clean = val.replace("#", "").trim();
                 if (clean.length() == 6) {
@@ -109,18 +119,57 @@ public class ControlPanelConfigScreen extends Screen {
                 }
             } catch (Exception ignored) {}
         });
-        addRenderableWidget(hexColorEdit);
+        addRenderableWidget(hexBaseColorEdit);
+
+        // Base Presets
+        for (int i = 0; i < BASE_PRESETS.length; i++) {
+            final int col = BASE_PRESETS[i];
+            int bx = left + 155 + i * 16;
+            Button b = Button.builder(Component.literal(""), btn -> {
+                selectedColor = col;
+                hexBaseColorEdit.setValue(String.format("#%06X", col & 0xFFFFFF));
+            }).bounds(bx, baseColY, 14, 14).build();
+            addRenderableWidget(b);
+        }
+
+        // Text Color Row (for elements with text)
+        if (isText || isButton || isLamp) {
+            int textColY = top + 124;
+            hexTextColorEdit = new EditBox(font, left + 70, textColY, 55, 14, Component.literal("Text Hex"));
+            hexTextColorEdit.setMaxLength(7);
+            hexTextColorEdit.setValue(String.format("#%06X", selectedTextColor & 0xFFFFFF));
+            hexTextColorEdit.setResponder(val -> {
+                try {
+                    String clean = val.replace("#", "").trim();
+                    if (clean.length() == 6) {
+                        selectedTextColor = Integer.parseInt(clean, 16);
+                    }
+                } catch (Exception ignored) {}
+            });
+            addRenderableWidget(hexTextColorEdit);
+
+            // Text Presets
+            for (int i = 0; i < TEXT_PRESETS.length; i++) {
+                final int col = TEXT_PRESETS[i];
+                int bx = left + 155 + i * 16;
+                Button b = Button.builder(Component.literal(""), btn -> {
+                    selectedTextColor = col;
+                    hexTextColorEdit.setValue(String.format("#%06X", col & 0xFFFFFF));
+                }).bounds(bx, textColY, 14, 14).build();
+                addRenderableWidget(b);
+            }
+        }
 
         // Size / Digit Buttons
-        int sizeRowY = top + 78;
+        int sizeRowY = (isText || isButton || isLamp) ? top + 146 : top + 76;
         if (isSevenSeg) {
             for (int digits = 1; digits <= 4; digits++) {
                 final int d = digits;
-                int btnX = left + 55 + (digits - 1) * 38;
+                int btnX = left + 52 + (digits - 1) * 36;
                 Button sizeBtn = Button.builder(Component.literal("1x" + d), b -> {
                     selectedSizeX = d;
                     selectedSizeY = 1;
-                }).bounds(btnX, sizeRowY, 34, 16).build();
+                }).bounds(btnX, sizeRowY, 32, 16).build();
                 addRenderableWidget(sizeBtn);
             }
         } else if (isText) {
@@ -128,71 +177,72 @@ public class ControlPanelConfigScreen extends Screen {
             for (int idx = 0; idx < textSizes.length; idx++) {
                 final int sx = textSizes[idx][0];
                 final int sy = textSizes[idx][1];
-                int btnX = left + 45 + idx * 30;
+                int btnX = left + 45 + idx * 34;
                 Button sizeBtn = Button.builder(Component.literal(sx + "x" + sy), b -> {
                     selectedSizeX = sx;
                     selectedSizeY = sy;
-                }).bounds(btnX, sizeRowY, 28, 16).build();
+                }).bounds(btnX, sizeRowY, 30, 16).build();
                 addRenderableWidget(sizeBtn);
             }
         } else {
             int maxS = (elem != null && elem.type == TileControlPanel.ElementType.SWITCH) ? 2 : 4;
             for (int sz = 1; sz <= maxS; sz++) {
                 final int s = sz;
-                int btnX = left + 55 + (sz - 1) * 38;
+                int btnX = left + 52 + (sz - 1) * 36;
                 Button sizeBtn = Button.builder(Component.literal(s + "x" + s), b -> {
                     selectedSizeX = s;
                     selectedSizeY = s;
-                }).bounds(btnX, sizeRowY, 34, 16).build();
+                }).bounds(btnX, sizeRowY, 32, 16).build();
                 addRenderableWidget(sizeBtn);
             }
         }
 
-        // Color preset buttons
-        int chipStartY = top + 118;
-        for (int i = 0; i < PRESET_COLORS.length; i++) {
-            final int col = PRESET_COLORS[i];
-            int colIdx = i % 6;
-            int row = i / 6;
-            int chipX = left + 18 + colIdx * 35;
-            int currentChipY = chipStartY + row * 18;
-
-            Button chip = Button.builder(Component.literal(""), b -> {
-                selectedColor = col;
-                hexColorEdit.setValue(String.format("#%06X", col & 0xFFFFFF));
-            }).bounds(chipX, currentChipY, 32, 15).build();
-            addRenderableWidget(chip);
-        }
-
         // Action Buttons at bottom
-        int botY = top + panelH - 28;
+        int botY = top + panelH - 26;
 
-        Button applyBtn = Button.builder(Component.literal("Apply & Save"), b -> {
-            applyAndClose();
-        }).bounds(left + 20, botY, 95, 20).build();
+        Button applyBtn = Button.builder(Component.literal("Apply & Save"), b -> applyAndClose())
+                .bounds(left + 16, botY, 110, 20).build();
         addRenderableWidget(applyBtn);
 
-        Button removeBtn = Button.builder(Component.literal("Remove Element"), b -> {
+        Button removeBtn = Button.builder(Component.literal("Remove Component"), b -> {
             PacketDistributor.sendToServer(new RemovePanelElementPayload(panel.getBlockPos(), slot));
             if (elem != null) {
                 elem.type = TileControlPanel.ElementType.NONE;
             }
             onClose();
-        }).bounds(left + 125, botY, 100, 20).build();
+        }).bounds(left + 134, botY, 130, 20).build();
         addRenderableWidget(removeBtn);
 
-        Button cancelBtn = Button.builder(Component.literal("Cancel"), b -> {
-            onClose();
-        }).bounds(left + 235, botY, 95, 20).build();
+        Button cancelBtn = Button.builder(Component.literal("Cancel"), b -> onClose())
+                .bounds(left + 272, botY, 90, 20).build();
         addRenderableWidget(cancelBtn);
     }
 
+    private String getJoinedText() {
+        if (lineEdits[0] == null) return "";
+        StringBuilder sb = new StringBuilder();
+        int lastNonEmpty = -1;
+        for (int i = 3; i >= 0; i--) {
+            if (lineEdits[i] != null && !lineEdits[i].getValue().trim().isEmpty()) {
+                lastNonEmpty = i;
+                break;
+            }
+        }
+        if (lastNonEmpty == -1) return "";
+        for (int i = 0; i <= lastNonEmpty; i++) {
+            if (i > 0) sb.append("\n");
+            sb.append(lineEdits[i] != null ? lineEdits[i].getValue() : "");
+        }
+        return sb.toString();
+    }
+
     private void applyAndClose() {
-        String label = labelEdit != null ? labelEdit.getValue() : "";
+        String label = getJoinedText();
         String disp = displayValueEdit != null ? displayValueEdit.getValue() : "";
 
         if (elem != null) {
             elem.color = selectedColor;
+            elem.textColor = selectedTextColor;
             elem.sizeX = selectedSizeX;
             elem.sizeY = selectedSizeY;
             elem.size = Math.max(selectedSizeX, selectedSizeY);
@@ -219,96 +269,155 @@ public class ControlPanelConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        // Render crisp dark gradient overlay - NO BLUR SHADER
-        g.fillGradient(0, 0, width, height, 0x990A0D12, 0xBB0A0D12);
+        // Prevent background world blur shader
+        if (this.minecraft != null && this.minecraft.gameRenderer != null) {
+            if (this.minecraft.gameRenderer.currentEffect() != null) {
+                this.minecraft.gameRenderer.shutdownEffect();
+            }
+        }
+
+        // Clean subtle dark tint behind the dialog
+        g.fillGradient(0, 0, width, height, 0x77000000, 0x88000000);
 
         int cx = width / 2;
         int cy = height / 2;
-        int panelW = 350;
-        int panelH = 240;
+        int panelW = 380;
+        int panelH = 248;
         int left = cx - panelW / 2;
         int top = cy - panelH / 2;
 
-        // Dark Industrial Window Frame
-        g.fill(left, top, left + panelW, top + panelH, 0xFF14181F);
-        g.renderOutline(left, top, panelW, panelH, 0xFF3E4856);
-        g.fill(left + 1, top + 1, left + panelW - 1, top + 22, 0xFF1F242D);
-        g.hLine(left + 1, left + panelW - 1, top + 22, 0xFF3E4856);
+        // Solid, crisp container box
+        g.fill(left, top, left + panelW, top + panelH, 0xFF191D24);
+        g.renderOutline(left, top, panelW, panelH, 0xFF3D4756);
+        g.renderOutline(left + 1, top + 1, panelW - 2, panelH - 2, 0xFF2A313C);
 
-        // Header Title
-        String elemName = elem != null ? elem.type.name() : "ELEMENT";
+        // Header bar
+        g.fill(left + 1, top + 1, left + panelW - 1, top + 22, 0xFF232832);
+        g.hLine(left + 1, left + panelW - 1, top + 22, 0xFF3D4756);
+
+        String elemName = elem != null ? elem.type.name() : "COMPONENT";
         g.drawString(font, "CONTROL PANEL: " + elemName + " [#" + (slot + 1) + "]", left + 10, top + 7, 0x00FFCC, false);
 
-        // Field Labels
         boolean isText = elem != null && elem.type == TileControlPanel.ElementType.TEXT;
         boolean isButton = elem != null && elem.type == TileControlPanel.ElementType.BUTTON;
         boolean isLamp = elem != null && elem.type == TileControlPanel.ElementType.LAMP;
         boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
 
+        // Field Labels
         if (isText || isButton || isLamp) {
-            g.drawString(font, "Text:", left + 18, top + 38, 0x8FA0B4, false);
+            for (int i = 0; i < 4; i++) {
+                g.drawString(font, "L" + (i + 1) + ":", left + 14, top + 34 + i * 18, 0x8FA0B4, false);
+            }
+            g.drawString(font, "Base:", left + 14, top + 109, 0x8FA0B4, false);
+            g.drawString(font, "Text:", left + 14, top + 127, 0x8FA0B4, false);
+            g.drawString(font, "Size:", left + 14, top + 150, 0x8FA0B4, false);
+
+            // Swatch rects
+            g.fill(left + 130, top + 106, left + 148, top + 120, 0xFF000000 | selectedColor);
+            g.renderOutline(left + 130, top + 106, 18, 14, 0xFF888888);
+
+            g.fill(left + 130, top + 124, left + 148, top + 138, 0xFF000000 | selectedTextColor);
+            g.renderOutline(left + 130, top + 124, 18, 14, 0xFF888888);
         } else if (isSevenSeg) {
-            g.drawString(font, "Value:", left + 18, top + 38, 0x8FA0B4, false);
+            g.drawString(font, "Val:", left + 14, top + 34, 0x8FA0B4, false);
+            g.drawString(font, "Color:", left + 14, top + 57, 0x8FA0B4, false);
+            g.drawString(font, "Digits:", left + 14, top + 80, 0x8FA0B4, false);
+
+            g.fill(left + 130, top + 54, left + 148, top + 68, 0xFF000000 | selectedColor);
+            g.renderOutline(left + 130, top + 54, 18, 14, 0xFF888888);
+        } else {
+            g.drawString(font, "Color:", left + 14, top + 57, 0x8FA0B4, false);
+            g.drawString(font, "Size:", left + 14, top + 80, 0x8FA0B4, false);
+
+            g.fill(left + 130, top + 54, left + 148, top + 68, 0xFF000000 | selectedColor);
+            g.renderOutline(left + 130, top + 54, 18, 14, 0xFF888888);
         }
 
-        g.drawString(font, "Color:", left + 18, top + 60, 0x8FA0B4, false);
-        g.drawString(font, isSevenSeg ? "Digits:" : "Size:", left + 18, top + 82, 0x8FA0B4, false);
-        g.drawString(font, "Palette:", left + 18, top + 104, 0x8FA0B4, false);
+        // Live Preview Box on the Right
+        int prevX = left + 258;
+        int prevY = top + 30;
+        int prevW = 106;
+        int prevH = 140;
+        g.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0xFF0E1116);
+        g.renderOutline(prevX, prevY, prevW, prevH, 0xFF353E4B);
+        g.drawString(font, "LIVE PREVIEW", prevX + (prevW - font.width("LIVE PREVIEW")) / 2, prevY + 5, 0x627284, false);
 
-        // Color sample box next to hex input
-        g.fill(left + 120, top + 56, left + 160, top + 72, 0xFF000000 | selectedColor);
-        g.renderOutline(left + 120, top + 56, 40, 16, 0xFF718096);
-
-        // Dedicated Preview Window on the Right
-        int prevX = left + 240;
-        int prevY = top + 34;
-        int prevW = 96;
-        int prevH = 120;
-        g.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0xFF0D1015);
-        g.renderOutline(prevX, prevY, prevW, prevH, 0xFF333B47);
-        g.drawString(font, "PREVIEW", prevX + (prevW - font.width("PREVIEW")) / 2, prevY + 5, 0x566375, false);
-
-        // Render preview inside
-        renderPreviewElement(g, prevX, prevY + 18, prevW, prevH - 22);
+        renderPreviewElement(g, prevX, prevY + 16, prevW, prevH - 20);
 
         super.render(g, mouseX, mouseY, partialTick);
 
-        // Draw color fills over the palette preset buttons
-        int chipStartY = top + 118;
-        for (int i = 0; i < PRESET_COLORS.length; i++) {
-            int colIdx = i % 6;
-            int row = i / 6;
-            int chipX = left + 18 + colIdx * 35;
-            int currentChipY = chipStartY + row * 18;
-            g.fill(chipX + 2, currentChipY + 2, chipX + 30, currentChipY + 13, 0xFF000000 | PRESET_COLORS[i]);
-            g.renderOutline(chipX + 2, currentChipY + 2, 28, 11, 0xFF000000);
+        // Overlay colored rects on the preset swatch buttons
+        int baseColY = (isText || isButton || isLamp) ? top + 106 : top + 54;
+        for (int i = 0; i < BASE_PRESETS.length; i++) {
+            int bx = left + 155 + i * 16;
+            g.fill(bx + 2, baseColY + 2, bx + 12, baseColY + 12, 0xFF000000 | BASE_PRESETS[i]);
+            g.renderOutline(bx + 1, baseColY + 1, 12, 12, 0xFF000000);
+        }
+
+        if (isText || isButton || isLamp) {
+            int textColY = top + 124;
+            for (int i = 0; i < TEXT_PRESETS.length; i++) {
+                int bx = left + 155 + i * 16;
+                g.fill(bx + 2, textColY + 2, bx + 12, textColY + 12, 0xFF000000 | TEXT_PRESETS[i]);
+                g.renderOutline(bx + 1, textColY + 1, 12, 12, 0xFF000000);
+            }
         }
     }
 
     private void renderPreviewElement(GuiGraphics g, int px, int py, int pw, int ph) {
         if (elem == null) return;
         int pColor = 0xFF000000 | selectedColor;
+        int tColor = 0xFF000000 | selectedTextColor;
+        String raw = getJoinedText();
+        String[] lines = raw.isEmpty() ? new String[0] : raw.split("\\r?\\n");
 
         switch (elem.type) {
             case BUTTON -> {
-                int btnSize = Math.min(50, 18 * selectedSizeX);
+                int btnSize = Math.min(54, 18 * selectedSizeX);
                 int bx = px + (pw - btnSize) / 2;
                 int by = py + (ph - btnSize) / 2;
                 g.fill(bx, by, bx + btnSize, by + btnSize, pColor);
                 g.renderOutline(bx, by, btnSize, btnSize, 0xFFE2E8F0);
-                g.fill(bx + 2, by + 2, bx + btnSize - 2, by + 4, 0x88FFFFFF);
-                String lbl = labelEdit != null ? labelEdit.getValue() : "";
-                if (!lbl.isEmpty()) {
-                    int lw = font.width(lbl);
-                    float scale = 1.0f;
-                    if (lw > btnSize - 6) {
-                        scale = (float)(btnSize - 6) / lw;
+                g.fill(bx + 2, by + 2, bx + btnSize - 2, by + 4, 0x77FFFFFF);
+
+                if (lines.length > 0) {
+                    float lineHeight = 9.0f;
+                    float totalH = lines.length * lineHeight;
+                    float startY = by + (btnSize - totalH) / 2.0f;
+                    for (int i = 0; i < lines.length; i++) {
+                        String line = lines[i];
+                        int lw = font.width(line);
+                        float scale = lw > (btnSize - 4) ? (float)(btnSize - 4) / lw : 1.0f;
+                        g.pose().pushPose();
+                        g.pose().translate(bx + btnSize / 2.0f, startY + i * lineHeight, 0);
+                        g.pose().scale(scale, scale, 1.0f);
+                        g.drawString(font, line, -lw / 2, 0, tColor, bold);
+                        g.pose().popPose();
                     }
-                    g.pose().pushPose();
-                    g.pose().translate(bx + btnSize / 2.0f, by + btnSize / 2.0f - 4, 0);
-                    g.pose().scale(scale, scale, 1.0f);
-                    g.drawString(font, lbl, -lw / 2, 0, 0xFFFFFFFF, bold);
-                    g.pose().popPose();
+                }
+            }
+            case LAMP -> {
+                int lampSize = Math.min(50, 16 * selectedSizeX);
+                int lx = px + (pw - lampSize) / 2;
+                int ly = py + (ph - lampSize) / 2;
+                g.fill(lx, ly, lx + lampSize, ly + lampSize, pColor);
+                g.renderOutline(lx, ly, lampSize, lampSize, 0xFFFFFFFF);
+                g.fill(lx + 4, ly + 4, lx + lampSize - 4, ly + lampSize - 4, 0x44FFFFFF);
+
+                if (lines.length > 0) {
+                    float lineHeight = 9.0f;
+                    float totalH = lines.length * lineHeight;
+                    float startY = ly + (lampSize - totalH) / 2.0f;
+                    for (int i = 0; i < lines.length; i++) {
+                        String line = lines[i];
+                        int lw = font.width(line);
+                        float scale = lw > (lampSize - 4) ? (float)(lampSize - 4) / lw : 1.0f;
+                        g.pose().pushPose();
+                        g.pose().translate(lx + lampSize / 2.0f, startY + i * lineHeight, 0);
+                        g.pose().scale(scale, scale, 1.0f);
+                        g.drawString(font, line, -lw / 2, 0, tColor, bold);
+                        g.pose().popPose();
+                    }
                 }
             }
             case SWITCH -> {
@@ -316,29 +425,8 @@ public class ControlPanelConfigScreen extends Screen {
                 int by = py + (ph - 42) / 2;
                 g.fill(bx, by, bx + 26, by + 42, 0xFF24272D);
                 g.renderOutline(bx, by, 26, 42, 0xFF4A5568);
-                g.fill(bx + 3, by + 4, bx + 23, by + 22, pColor); // rocker up
-                g.fill(bx + 11, by + 8, bx + 15, by + 12, 0xFF00FFCC); // LED dot
-            }
-            case LAMP -> {
-                int lampSize = Math.min(46, 16 * selectedSizeX);
-                int lx = px + (pw - lampSize) / 2;
-                int ly = py + (ph - lampSize) / 2;
-                g.fill(lx, ly, lx + lampSize, ly + lampSize, pColor);
-                g.renderOutline(lx, ly, lampSize, lampSize, 0xFFFFFFFF);
-                g.fill(lx + 4, ly + 4, lx + lampSize - 4, ly + lampSize - 4, 0x66FFFFFF);
-                String lbl = labelEdit != null ? labelEdit.getValue() : "";
-                if (!lbl.isEmpty()) {
-                    int lw = font.width(lbl);
-                    float scale = 1.0f;
-                    if (lw > lampSize - 4) {
-                        scale = (float)(lampSize - 4) / lw;
-                    }
-                    g.pose().pushPose();
-                    g.pose().translate(lx + lampSize / 2.0f, ly + lampSize / 2.0f - 4 * scale, 0);
-                    g.pose().scale(scale, scale, 1.0f);
-                    g.drawString(font, lbl, -lw / 2, 0, 0xFFFFFFFF, bold);
-                    g.pose().popPose();
-                }
+                g.fill(bx + 3, by + 4, bx + 23, by + 22, pColor);
+                g.fill(bx + 11, by + 8, bx + 15, by + 12, 0xFF00FFCC);
             }
             case SEVEN_SEGMENT -> {
                 String val = displayValueEdit != null && !displayValueEdit.getValue().isEmpty() ? displayValueEdit.getValue() : "8";
@@ -351,23 +439,24 @@ public class ControlPanelConfigScreen extends Screen {
                 }
             }
             case TEXT -> {
-                int tw = Math.min(pw - 8, selectedSizeX * 12);
-                int th = Math.min(ph - 12, selectedSizeY * 18);
-                int tx = px + (pw - tw) / 2;
-                int ty = py + (ph - th) / 2;
-                g.fill(tx, ty, tx + tw, ty + th, 0xFF1C2026);
-                g.renderOutline(tx, ty, tw, th, 0xFF404854);
-                String txt = labelEdit != null && !labelEdit.getValue().isEmpty() ? labelEdit.getValue() : "TEXT";
-                int strW = font.width(txt);
-                float scale = 1.0f;
-                if (strW > tw - 4) {
-                    scale = (float)(tw - 4) / strW;
+                // Pure text component without background box!
+                if (lines.length > 0) {
+                    float lineHeight = 10.0f;
+                    float totalH = lines.length * lineHeight;
+                    float startY = py + (ph - totalH) / 2.0f;
+                    for (int i = 0; i < lines.length; i++) {
+                        String line = lines[i];
+                        int lw = font.width(line);
+                        float scale = lw > (pw - 8) ? (float)(pw - 8) / lw : 1.0f;
+                        g.pose().pushPose();
+                        g.pose().translate(px + pw / 2.0f, startY + i * lineHeight, 0);
+                        g.pose().scale(scale, scale, 1.0f);
+                        g.drawString(font, line, -lw / 2, 0, tColor, bold);
+                        g.pose().popPose();
+                    }
+                } else {
+                    g.drawString(font, "LINE 1\nLINE 2", px + 10, py + ph / 2 - 8, 0x445566, false);
                 }
-                g.pose().pushPose();
-                g.pose().translate(tx + tw / 2.0f, ty + th / 2.0f - 4 * scale, 0);
-                g.pose().scale(scale, scale, 1.0f);
-                g.drawString(font, txt, -strW / 2, 0, pColor, bold);
-                g.pose().popPose();
             }
             default -> {}
         }

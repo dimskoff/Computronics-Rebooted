@@ -15,10 +15,10 @@
   "block.computronics.speech_box": "Голосовой блок (Speech Box)",
   "block.computronics.entity_detector": "Детектор сущностей",
 
-  "item.computronics.pocket_terminal": "Карманный терминал",
-  "tooltip.computronics.pocket_terminal.desc1": "Компактный ручной терминал с аппаратным VRAM-дисплеем 32x12.",
+  "item.computronics.pocket_terminal": "Беспроводной монитор",
+  "tooltip.computronics.pocket_terminal.desc1": "Портативный широкоформатный 16:10 беспроводной монитор с аппаратным VRAM-буфером.",
   "tooltip.computronics.pocket_terminal.desc2": "Принимает пакеты отрисовки через беспроводную сетевую карту на выделенном порту.",
-  "tooltip.computronics.pocket_terminal.desc3": "ПКМ переключает питание. Заряжается в зарядном устройстве OpenComputers.",
+  "tooltip.computronics.pocket_terminal.desc3": "ПКМ переключает питание. Shift+ПКМ с EEPROM в руке прошивает ПО. Заряжается в заряднике OC.",
   "tooltip.computronics.entity_detector.desc": "Высокоточный детектор игроков и сущностей с конусом направленного сканирования.",
 
   "item.computronics.screwdriver": "Монтажная отвёртка",
@@ -60,9 +60,6 @@
   "item.computronics.rack_board_co_processor": "Криптосопроцессор стойки (Crypto Co-Processor)",
   "tooltip.computronics.rack_board_co_processor.desc1": "Аппаратный криптографический ASIC-чип для серверных стоек.",
   "tooltip.computronics.rack_board_co_processor.desc2": "Аппаратно ускоряет MD5, SHA-256, CRC32 и шифрование AES-128 без задержек.",
-  "item.computronics.rack_board_kvm": "Модуль KVM-переключателя стойки (KVM Switch)",
-  "tooltip.computronics.rack_board_kvm.desc1": "4-портовый модуль переключения консоли серверов стойки.",
-  "tooltip.computronics.rack_board_kvm.desc2": "Переключение активного сервера кликом мыши на стойке или через OpenOS.",
 
   "item.computronics.network_card_3": "Сетевая карта 3-го уровня",
   "item.computronics.packet_sniffer": "Пакетный сниффер",

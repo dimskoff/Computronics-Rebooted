@@ -15,10 +15,10 @@
   "block.computronics.speech_box": "Speech Box",
   "block.computronics.entity_detector": "Entity Detector",
 
-  "item.computronics.pocket_terminal": "Pocket Terminal",
-  "tooltip.computronics.pocket_terminal.desc1": "Compact handheld data terminal with hardware 32x12 VRAM display.",
+  "item.computronics.pocket_terminal": "Wireless Monitor",
+  "tooltip.computronics.pocket_terminal.desc1": "Portable widescreen 16:10 wireless display monitor with hardware VRAM buffer.",
   "tooltip.computronics.pocket_terminal.desc2": "Receives wireless display rendering packets via OpenComputers wireless network cards.",
-  "tooltip.computronics.pocket_terminal.desc3": "Right-click toggles power. Can be recharged in OpenComputers Chargers.",
+  "tooltip.computronics.pocket_terminal.desc3": "Right-click toggles power. Sneak + Right-Click with EEPROM flashes firmware. Can be recharged in OpenComputers Chargers.",
   "tooltip.computronics.entity_detector.desc": "High-precision directional entity and player scanner with configurable cone.",
 
   "item.computronics.screwdriver": "Control Panel Screwdriver",
@@ -60,9 +60,6 @@
   "item.computronics.rack_board_co_processor": "Server Rack Cryptographic Co-Processor",
   "tooltip.computronics.rack_board_co_processor.desc1": "Hardware cryptographic ASIC board for OpenComputers Server Racks.",
   "tooltip.computronics.rack_board_co_processor.desc2": "Accelerates MD5, SHA-256, CRC32, and AES-128 encryption with zero cycle overhead.",
-  "item.computronics.rack_board_kvm": "Server Rack KVM Switch Module",
-  "tooltip.computronics.rack_board_kvm.desc1": "4-port KVM routing module for OpenComputers Server Racks.",
-  "tooltip.computronics.rack_board_kvm.desc2": "Centralizes server console focus. Switchable via click on rack face or OpenOS scripts.",
 
   "item.computronics.network_card_3": "Network Card (Tier 3)",
   "item.computronics.packet_sniffer": "Packet Sniffer Card",

@@ -32,7 +32,6 @@
 - [Плата самоуничтожения (Detonator Board)](item/rack_board_boom.md): Экстренный направленный подрыв стойки с таймером.
 - [Конденсаторная плата (Capacitor Board)](item/rack_board_capacitor.md): Резервный буфер питания ИБП ёмкостью 50 000 EU.
 - [Криптосопроцессор (Crypto Co-Processor)](item/rack_board_co_processor.md): Аппаратный ASIC-чип для ускорения MD5, SHA-256, CRC32 и AES-128.
-- [Модуль KVM-переключателя (KVM Switch)](item/rack_board_kvm.md): 4-портовый модуль переключения консоли серверов прямо на стойке.
 
 ## Платы расширения и апгрейды
 

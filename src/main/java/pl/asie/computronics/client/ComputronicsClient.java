@@ -106,9 +106,6 @@ public class ComputronicsClient {
                         if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackCoProcessor) {
                             return "%LANGUAGE%/computronics/item/rack_board_co_processor.md";
                         }
-                        if (stack.getItem() instanceof pl.asie.computronics.item.rack.ItemRackKVM) {
-                            return "%LANGUAGE%/computronics/item/rack_board_kvm.md";
-                        }
                         return null;
                     }
 

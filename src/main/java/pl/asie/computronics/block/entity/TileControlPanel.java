@@ -457,7 +457,7 @@ public class TileControlPanel extends TileEntityComputronics {
         return new Object[]{true};
     }
 
-    @Callback(doc = "function(x:number, y:number, state:boolean):boolean -- Toggles miniature lamp on/off.")
+    @Callback(doc = "function(x:number, y:number, state:boolean[, color:number]):boolean -- Toggles miniature lamp on/off with optional RGB color.")
     public Object[] setLamp(Context context, Arguments args) {
         int gx = args.checkInteger(0);
         int gy = args.checkInteger(1);
@@ -465,6 +465,23 @@ public class TileControlPanel extends TileEntityComputronics {
         PanelElement elem = findRootElement(gx, gy);
         if (elem != null && elem.type == ElementType.LAMP) {
             elem.active = state;
+            if (args.count() >= 4) {
+                elem.color = args.checkInteger(3) & 0xFFFFFF;
+            }
+            markChangedAndSync();
+            return new Object[]{true};
+        }
+        return new Object[]{false, "no lamp at coordinates"};
+    }
+
+    @Callback(doc = "function(x:number, y:number, color:number):boolean -- Sets lamp color by grid (x, y).")
+    public Object[] setLampColor(Context context, Arguments args) {
+        int gx = args.checkInteger(0);
+        int gy = args.checkInteger(1);
+        int color = args.checkInteger(2);
+        PanelElement elem = findRootElement(gx, gy);
+        if (elem != null && elem.type == ElementType.LAMP) {
+            elem.color = color & 0xFFFFFF;
             markChangedAndSync();
             return new Object[]{true};
         }

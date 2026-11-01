@@ -397,25 +397,39 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
     private static void renderInWorldText(PoseStack poseStack, MultiBufferSource buffer, Font font,
                                           AttachFace face, Direction facing,
                                           float cu1, float cv1, float cu2, float cv2, float h,
-                                          String text, int textColor, boolean bold, float textScale) {
-        if (text == null || text.trim().isEmpty()) return;
+                                          String rawText, int textColor, boolean bold, float textScale) {
+        if (rawText == null || rawText.trim().isEmpty()) return;
+
+        // Multi-line support: split by \n or \r\n (up to 4 lines)
+        String[] lines = rawText.split("\\r?\\n");
+        if (lines.length > 4) {
+            String[] trimmed = new String[4];
+            System.arraycopy(lines, 0, trimmed, 0, 4);
+            lines = trimmed;
+        }
 
         float uMid = (cu1 + cu2) * 0.5f;
         float vMid = (cv1 + cv2) * 0.5f;
 
         float[] center = mapCoord(face, facing, uMid, vMid, h);
 
-        int strWidth = font.width(text);
-        if (strWidth <= 0) return;
+        float maxLineWidth = 0;
+        for (String line : lines) {
+            maxLineWidth = Math.max(maxLineWidth, font.width(line));
+        }
+        if (maxLineWidth <= 0) return;
 
         float boxW = (cu2 - cu1);
         float boxH = (cv2 - cv1);
 
+        float lineHeight = 9.5f;
+        float totalTextHeight = lines.length * lineHeight;
+
         float scale = 0.0035f * Math.max(0.2f, textScale);
 
-        // Keep text nicely contained inside bounds
-        float textWInWorld = strWidth * scale;
-        float textHInWorld = 9.0f * scale;
+        // Keep multi-line text nicely contained inside bounds
+        float textWInWorld = maxLineWidth * scale;
+        float textHInWorld = totalTextHeight * scale;
         if (textWInWorld > boxW * 0.90f) {
             scale *= (boxW * 0.90f) / textWInWorld;
         }
@@ -458,21 +472,26 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         // Standard Minecraft 3D font scaling: -scale flips Y for CCW upright glyphs
         poseStack.scale(scale, -scale, scale);
 
-        float drawX = -strWidth * 0.5f;
-        float drawY = -4.5f;
+        float startY = - (lines.length * lineHeight) * 0.5f;
 
-        font.drawInBatch(
-                text,
-                drawX,
-                drawY,
-                textColor | 0xFF000000,
-                false,
-                poseStack.last().pose(),
-                buffer,
-                Font.DisplayMode.POLYGON_OFFSET,
-                0,
-                0x00F000F0
-        );
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            float drawX = - font.width(line) * 0.5f;
+            float drawY = startY + i * lineHeight;
+
+            font.drawInBatch(
+                    line,
+                    drawX,
+                    drawY,
+                    textColor | 0xFF000000,
+                    false,
+                    poseStack.last().pose(),
+                    buffer,
+                    Font.DisplayMode.POLYGON_OFFSET,
+                    0,
+                    0x00F000F0
+            );
+        }
 
         poseStack.popPose();
     }

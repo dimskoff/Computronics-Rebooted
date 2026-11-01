@@ -141,6 +141,8 @@ local H = {
     fx           = component.isAvailable("particle_fx") and component.particle_fx or nil,
     speech       = component.isAvailable("speech_box") and component.speech_box or nil,
     detector     = component.isAvailable("entity_detector") and component.entity_detector or nil,
+    light        = component.isAvailable("light_board") and component.light_board or nil,
+    switch       = component.isAvailable("switch_board") and component.switch_board or nil,
 }
 
 local function rescanHardware()
@@ -163,6 +165,8 @@ local function rescanHardware()
     H.fx       = component.isAvailable("particle_fx") and component.particle_fx or nil
     H.speech   = component.isAvailable("speech_box") and component.speech_box or nil
     H.detector = component.isAvailable("entity_detector") and component.entity_detector or nil
+    H.light    = component.isAvailable("light_board") and component.light_board or nil
+    H.switch   = component.isAvailable("switch_board") and component.switch_board or nil
 
     if H.modem and not H.modem.isOpen(netPort) then
         pcall(function() H.modem.open(netPort) end)
@@ -250,7 +254,8 @@ local TABS = {
     {id = 15, name = "15:PANEL",   title = "MODULAR CONTROL PANEL",comp = "control_panel"},
     {id = 16, name = "16:FX",      title = "PARTICLE FX & BEEP",   comp = "particle_fx"},
     {id = 17, name = "17:DETECT",  title = "ENTITY DETECTOR",      comp = "entity_detector"},
-    {id = 18, name = "18:POCKET",  title = "POCKET TERMINAL",      comp = "modem"},
+    {id = 18, name = "18:MONITOR", title = "WIRELESS MONITOR",     comp = "modem"},
+    {id = 19, name = "19:RACK",    title = "SERVER RACK BOARDS",   comp = "light_board"},
 }
 
 -- Render Header & Tab Navigation
@@ -1789,7 +1794,7 @@ local function renderPocketTerminal()
     local sY = bY + 7
     setColors(0xCCDDEE, 0x1E2228)
     gpu.fill(sX - 2, sY - 1, 36, 13, " ")
-    gpu.set(sX, sY - 1, "● POCKET TERMINAL PREVIEW")
+    gpu.set(sX, sY - 1, "● WIRELESS MONITOR PREVIEW")
 
     setColors(0x00FF66, 0x08150A)
     gpu.fill(sX, sY, 32, 10, " ")
@@ -1804,14 +1809,118 @@ local function renderPocketTerminal()
     local iX = sX + 38
     setColors(C.TEXT, C.BG)
     gpu.set(iX, sY, "HOLDING IN HAND:")
-    gpu.set(iX, sY + 1, "• Hold Pocket Terminal in right or offhand.")
-    gpu.set(iX, sY + 2, "• Live HUD overlay appears like a handheld map.")
+    gpu.set(iX, sY + 1, "• Hold Wireless Monitor in right or offhand.")
+    gpu.set(iX, sY + 2, "• 16:10 widescreen handheld monitor.")
     gpu.set(iX, sY + 3, "• Right-click in hand toggles power ON / OFF.")
     gpu.set(iX, sY + 4, "• Stand on Inductive Charger to recharge.")
     gpu.set(iX, sY + 6, "LUA API:")
     gpu.set(iX, sY + 7, "m.broadcast(404, 'pt', id, 'print', text)")
     gpu.set(iX, sY + 8, "m.broadcast(404, 'pt', id, 'set', x, y, str)")
     gpu.set(iX, sY + 9, "m.broadcast(404, 'pt', id, 'color', fg, bg)")
+end
+
+local function renderServerRack()
+    local bX, bY, bW, bH = 2, 4, screenW - 2, screenH - 5
+    renderBox(bX, bY, bW, bH, "SERVER RACK EXPANSION BOARDS")
+
+    local colW = math.floor((bW - 4) / 2)
+
+    -- LEFT COLUMN: Light Board
+    renderBox(bX + 1, bY + 1, colW, bH - 2, "LED LIGHT BOARD")
+    if not H.light then
+        setColors(C.RED, C.BG)
+        gpu.set(bX + 3, bY + 3, "● Light Board not detected in rack.")
+        setColors(C.TEXT_DIM, C.BG)
+        gpu.set(bX + 3, bY + 4, "Install a Light Board into an OpenComputers Rack.")
+    else
+        local mode = pcall(H.light.getMode) and H.light.getMode() or 1
+        local count = pcall(H.light.getLightCount) and H.light.getLightCount() or 4
+        setColors(C.GREEN, C.BG)
+        gpu.set(bX + 3, bY + 3, string.format("● ONLINE | Active Mode: %d | Total LEDs: %d", mode, count))
+
+        setColors(C.CYAN, C.BG)
+        gpu.set(bX + 3, bY + 5, "SELECT DISPLAY MODE:")
+
+        local modes = {
+            {id = 1, name = "1: 4 LEDs"},
+            {id = 2, name = "2: 5 LEDs"},
+            {id = 3, name = "3: 10 LEDs"},
+            {id = 4, name = "4: 12 LEDs"},
+            {id = 5, name = "5: 42 LEDs"}
+        }
+
+        for i, m in ipairs(modes) do
+            local isCur = (m.id == mode)
+            addButton("rack_m_" .. m.id, bX + 3 + (i - 1) * 11, bY + 6, 10, 1, m.name, function()
+                pcall(H.light.setMode, m.id)
+                setStatus("Light board mode set to " .. m.name)
+            end, isCur and C.TAB_ACTIVE or C.BTN_BG, isCur and C.BG or C.TEXT)
+        end
+
+        setColors(C.CYAN, C.BG)
+        gpu.set(bX + 3, bY + 8, "LED PATTERNS:")
+
+        addButton("rack_pat_rain", bX + 3, bY + 9, 11, 1, "[ RAINBOW ]", function()
+            local rainbow = {0xFF0000, 0xFF8800, 0xFFFF00, 0x00FF00, 0x00FFFF, 0x0000FF, 0x8800FF}
+            for idx = 1, count do
+                local c = rainbow[((idx - 1) % #rainbow) + 1]
+                pcall(H.light.setColor, idx, c)
+            end
+            setStatus("Applied rainbow wave pattern across all LEDs.")
+        end, C.BTN_BG, C.CYAN)
+
+        addButton("rack_pat_cyn", bX + 15, bY + 9, 11, 1, "[ ALL CYAN ]", function()
+            for idx = 1, count do pcall(H.light.setColor, idx, 0x00FFCC) end
+            setStatus("Set all LEDs to Cyber Cyan.")
+        end, C.BTN_BG, C.CYAN)
+
+        addButton("rack_pat_amb", bX + 27, bY + 9, 11, 1, "[ WARNING ]", function()
+            for idx = 1, count do pcall(H.light.setColor, idx, 0xFF8800) end
+            setStatus("Set all LEDs to Warning Amber.")
+        end, C.BTN_BG, C.YELLOW)
+
+        addButton("rack_pat_clr", bX + 39, bY + 9, 9, 1, "[ CLEAR ]", function()
+            pcall(H.light.clear)
+            setStatus("Cleared all rack lights.")
+        end, C.BTN_BG, C.RED)
+    end
+
+    -- RIGHT COLUMN: Switch Board
+    local rX = bX + colW + 2
+    renderBox(rX, bY + 1, colW, bH - 2, "SWITCH BOARD")
+    if not H.switch then
+        setColors(C.RED, C.BG)
+        gpu.set(rX + 2, bY + 3, "● Switch Board not detected in rack.")
+        setColors(C.TEXT_DIM, C.BG)
+        gpu.set(rX + 2, bY + 4, "Install a Switch Board into an OpenComputers Rack.")
+    else
+        setColors(C.GREEN, C.BG)
+        gpu.set(rX + 2, bY + 3, "● ONLINE | 4 Interactive Toggle Switches")
+
+        for sw = 1, 4 do
+            local state = false
+            local ok, res = pcall(H.switch.getSwitch, sw)
+            if ok then state = not not res end
+
+            local col = state and C.GREEN or C.RED
+            local text = string.format("SWITCH #%d: [%s]", sw, state and " ON " or " OFF ")
+
+            addButton("rack_sw_" .. sw, rX + 2, bY + 4 + sw * 2, 18, 1, text, function()
+                pcall(H.switch.setSwitch, sw, not state)
+                setStatus(string.format("Toggled Switch #%d -> %s", sw, (not state) and "ON" or "OFF"))
+            end, C.BTN_BG, col)
+        end
+
+        addButton("rack_sw_all_on", rX + 2, bY + 15, 12, 1, "[ ALL ON ]", function()
+            for s = 1, 4 do pcall(H.switch.setSwitch, s, true) end
+            setStatus("Activated all switches.")
+        end, C.BTN_BG, C.GREEN)
+
+        addButton("rack_sw_all_off", rX + 16, bY + 15, 13, 1, "[ ALL OFF ]", function()
+            for s = 1, 4 do pcall(H.switch.setSwitch, s, false) end
+            setStatus("Deactivated all switches.")
+        end, C.BTN_BG, C.RED)
+    end
 end
 
 -- ============================================================================
@@ -1856,6 +1965,8 @@ local function render()
         renderEntityDetector()
     elseif currentTab == 18 then
         renderPocketTerminal()
+    elseif currentTab == 19 then
+        renderServerRack()
     end
 end
 
@@ -1940,6 +2051,12 @@ while running do
         table.insert(logs.panel, 1, line)
         if #logs.panel > 20 then table.remove(logs.panel) end
         setStatus("Control Panel: " .. line)
+        render()
+
+    elseif ev == "switch_flipped" or ev == "rack_switch" then
+        local swIdx = tonumber(a) or 1
+        local state = not not b
+        setStatus(string.format("Rack Switch #%d flipped -> %s", swIdx, state and "ON" or "OFF"))
         render()
 
     elseif ev == "tripwire_triggered" then

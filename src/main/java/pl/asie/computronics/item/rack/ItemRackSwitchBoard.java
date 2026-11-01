@@ -17,6 +17,7 @@ public class ItemRackSwitchBoard extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.computronics.rack_board_switch.desc1").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.computronics.rack_board_switch.desc2").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Contains 4 interactive hardware toggle switches.").withStyle(ChatFormatting.AQUA));
+        tooltip.add(Component.literal("Sends switch_flipped(index, state) signals on change.").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

@@ -17,51 +17,56 @@ public class ModCreativeTabs {
                     .title(Component.translatable("itemGroup.computronics"))
                     .icon(() -> new ItemStack(ModItems.NETWORK_CARD_3.get()))
                     .displayItems((parameters, output) -> {
-                        // Blocks
-                        output.accept(ModBlocks.CHAT_BOX.get());
-                        output.accept(ModBlocks.RADAR.get());
-                        output.accept(ModBlocks.CAMERA.get());
-                        output.accept(ModBlocks.TAPE_DRIVE.get());
-                        output.accept(ModBlocks.ACOUSTIC_SENSOR.get());
-                        output.accept(ModBlocks.RF_JAMMER.get());
-                        output.accept(ModBlocks.WEATHER_STATION.get());
-                        output.accept(ModBlocks.INDUCTIVE_CHARGER.get());
-                        output.accept(ModBlocks.LASER_TRANSCEIVER.get());
-                        output.accept(ModBlocks.ANALOG_GAUGE.get());
-                        output.accept(ModBlocks.IRON_NOTEBLOCK.get());
+                        // 1. Hardware & Peripheral Blocks
                         output.accept(ModBlocks.CONTROL_PANEL.get());
                         output.accept(ModBlocks.SPEECH_BOX.get());
+                        output.accept(ModBlocks.CHAT_BOX.get());
+                        output.accept(ModBlocks.TAPE_DRIVE.get());
+                        output.accept(ModBlocks.CAMERA.get());
+                        output.accept(ModBlocks.RADAR.get());
                         output.accept(ModBlocks.ENTITY_DETECTOR.get());
+                        output.accept(ModBlocks.ACOUSTIC_SENSOR.get());
+                        output.accept(ModBlocks.WEATHER_STATION.get());
+                        output.accept(ModBlocks.LASER_TRANSCEIVER.get());
+                        output.accept(ModBlocks.RF_JAMMER.get());
+                        output.accept(ModBlocks.INDUCTIVE_CHARGER.get());
+                        output.accept(ModBlocks.ANALOG_GAUGE.get());
+                        output.accept(ModBlocks.IRON_NOTEBLOCK.get());
 
-                        // Handhelds, Modular Elements & Cards
-                        output.accept(ModItems.POCKET_TERMINAL.get());
+                        // 2. Modular Panel Elements & Tools
                         output.accept(ModItems.SCREWDRIVER.get());
-                        output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.MINI_BUTTON.get());
                         output.accept(ModItems.TOGGLE_SWITCH.get());
+                        output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.SEVEN_SEGMENT.get());
                         output.accept(ModItems.PANEL_TEXT.get());
+
+                        // 3. Handheld & Portable Devices
+                        output.accept(ModItems.POCKET_TERMINAL.get());
+
+                        // 4. Expansion Cards
                         output.accept(ModItems.NETWORK_CARD_3.get());
                         output.accept(ModItems.PACKET_SNIFFER.get());
-                        output.accept(ModItems.CARD_BOOM.get());
-                        output.accept(ModItems.RF_JAMMER_CARD.get());
                         output.accept(ModItems.CARD_BEEP.get());
                         output.accept(ModItems.CARD_FX.get());
-                        output.accept(ModItems.CHAT_UPGRADE.get());
+                        output.accept(ModItems.RF_JAMMER_CARD.get());
+                        output.accept(ModItems.CARD_BOOM.get());
+
+                        // 5. Robot & Microcontroller Upgrades
                         output.accept(ModItems.SPEECH_UPGRADE.get());
+                        output.accept(ModItems.CHAT_UPGRADE.get());
                         output.accept(ModItems.RADAR_UPGRADE.get());
                         output.accept(ModItems.CAMERA_UPGRADE.get());
                         output.accept(ModItems.WINCH_UPGRADE.get());
 
-                        // Server Rack Mountables
+                        // 6. Server Rack Mountables
                         output.accept(ModItems.RACK_BOARD_LIGHT.get());
                         output.accept(ModItems.RACK_BOARD_SWITCH.get());
-                        output.accept(ModItems.RACK_BOARD_BOOM.get());
-                        output.accept(ModItems.RACK_BOARD_CAPACITOR.get());
                         output.accept(ModItems.RACK_BOARD_CO_PROCESSOR.get());
-                        output.accept(ModItems.RACK_BOARD_KVM.get());
+                        output.accept(ModItems.RACK_BOARD_CAPACITOR.get());
+                        output.accept(ModItems.RACK_BOARD_BOOM.get());
 
-                        // Cassette Tapes
+                        // 7. Cassette Tapes & Media
                         output.accept(ModItems.TAPE_IRON.get());
                         output.accept(ModItems.TAPE_GOLD.get());
                         output.accept(ModItems.TAPE_DIAMOND.get());

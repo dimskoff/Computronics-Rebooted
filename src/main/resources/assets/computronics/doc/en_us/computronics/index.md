@@ -32,7 +32,6 @@ Welcome to **Computronics: Rebooted**, an expansion mod for **OpenComputers** on
 - [Server Rack Detonator Board](item/rack_board_boom.md): Emergency rack self-destruct board with countdown.
 - [Server Rack Capacitor Board](item/rack_board_capacitor.md): 50,000 EU rack UPS power buffer.
 - [Server Rack Cryptographic Co-Processor](item/rack_board_co_processor.md): High-speed hardware ASIC for MD5, SHA-256, CRC32, and AES-128.
-- [Server Rack KVM Switch Module](item/rack_board_kvm.md): 4-port console routing module switchable from rack face.
 
 ## Expansion Cards & Upgrades
 
