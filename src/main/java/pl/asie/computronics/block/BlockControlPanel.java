@@ -120,10 +120,10 @@ public class BlockControlPanel extends BlockComputronics {
         } else { // WALL
             v = 1.0 - y;
             switch (facing) {
-                case NORTH -> u = x;
-                case SOUTH -> u = 1.0 - x;
-                case WEST  -> u = 1.0 - z;
-                case EAST  -> u = z;
+                case SOUTH -> u = x;
+                case NORTH -> u = 1.0 - x;
+                case WEST  -> u = z;
+                case EAST  -> u = 1.0 - z;
                 default    -> u = x;
             }
         }

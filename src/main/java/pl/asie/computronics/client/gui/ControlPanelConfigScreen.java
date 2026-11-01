@@ -75,10 +75,11 @@ public class ControlPanelConfigScreen extends Screen {
 
         boolean isText = elem != null && elem.type == TileControlPanel.ElementType.TEXT;
         boolean isButton = elem != null && elem.type == TileControlPanel.ElementType.BUTTON;
+        boolean isLamp = elem != null && elem.type == TileControlPanel.ElementType.LAMP;
         boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
 
         // Label / Text Input
-        if (isText || isButton) {
+        if (isText || isButton || isLamp) {
             labelEdit = new EditBox(font, left + 55, top + 34, 115, 16, Component.literal("Text"));
             labelEdit.setMaxLength(32);
             labelEdit.setValue(labelText);
@@ -240,9 +241,11 @@ public class ControlPanelConfigScreen extends Screen {
 
         // Field Labels
         boolean isText = elem != null && elem.type == TileControlPanel.ElementType.TEXT;
+        boolean isButton = elem != null && elem.type == TileControlPanel.ElementType.BUTTON;
+        boolean isLamp = elem != null && elem.type == TileControlPanel.ElementType.LAMP;
         boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
 
-        if (isText || (elem != null && elem.type == TileControlPanel.ElementType.BUTTON)) {
+        if (isText || isButton || isLamp) {
             g.drawString(font, "Text:", left + 18, top + 38, 0x8FA0B4, false);
         } else if (isSevenSeg) {
             g.drawString(font, "Value:", left + 18, top + 38, 0x8FA0B4, false);
@@ -323,6 +326,19 @@ public class ControlPanelConfigScreen extends Screen {
                 g.fill(lx, ly, lx + lampSize, ly + lampSize, pColor);
                 g.renderOutline(lx, ly, lampSize, lampSize, 0xFFFFFFFF);
                 g.fill(lx + 4, ly + 4, lx + lampSize - 4, ly + lampSize - 4, 0x66FFFFFF);
+                String lbl = labelEdit != null ? labelEdit.getValue() : "";
+                if (!lbl.isEmpty()) {
+                    int lw = font.width(lbl);
+                    float scale = 1.0f;
+                    if (lw > lampSize - 4) {
+                        scale = (float)(lampSize - 4) / lw;
+                    }
+                    g.pose().pushPose();
+                    g.pose().translate(lx + lampSize / 2.0f, ly + lampSize / 2.0f - 4 * scale, 0);
+                    g.pose().scale(scale, scale, 1.0f);
+                    g.drawString(font, lbl, -lw / 2, 0, 0xFFFFFFFF, bold);
+                    g.pose().popPose();
+                }
             }
             case SEVEN_SEGMENT -> {
                 String val = displayValueEdit != null && !displayValueEdit.getValue().isEmpty() ? displayValueEdit.getValue() : "8";

@@ -51,10 +51,12 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
         Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
 
+        // ====================================================================
+        // PASS 1: Render All Solid Geometry (Buttons, Lamps, Switches, 7-Seg)
+        // ====================================================================
         poseStack.pushPose();
         Matrix4f pose = poseStack.last().pose();
         VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.FONT_QUAD);
-        Font font = Minecraft.getInstance().font;
 
         for (int slot = 0; slot < TileControlPanel.TOTAL_SLOTS; slot++) {
             TileControlPanel.PanelElement elem = panel.getElement(slot);
@@ -94,13 +96,6 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                 renderFaceQuad(pose, vc, face, facing, cu1 + capPad + 0.006f, cv1 + capPad + 0.006f,
                         cu2 - capPad - 0.006f, cv2 - capPad - 0.006f, h2 + 0.001f,
                         Math.min(255, br + 45), Math.min(255, bg + 45), Math.min(255, bb + 45));
-
-                // 3D In-world Text on button cap
-                if (elem.label != null && !elem.label.isEmpty()) {
-                    renderInWorldText(poseStack, buffer, font, face, facing,
-                            cu1 + capPad, cv1 + capPad, cu2 - capPad, cv2 - capPad, h2 + 0.002f,
-                            elem.label, elem.textColor, elem.bold, 0.85f, packedLight);
-                }
 
             } else if (elem.type == TileControlPanel.ElementType.SWITCH) {
                 // Industrial Rocker / Toggle Switch
@@ -158,19 +153,53 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                         0.007f, text, elem.color, elem.active, sizeX);
 
             } else if (elem.type == TileControlPanel.ElementType.TEXT) {
-                // Modular Text Label with matte dark backing
-                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.002f, 26, 30, 36);
-                renderFaceQuad(pose, vc, face, facing, cu1 + 0.003f, cv1 + 0.003f, cu2 - 0.003f, cv2 - 0.003f, 0.003f, 16, 18, 22);
-
-                if (elem.label != null && !elem.label.isEmpty()) {
-                    renderInWorldText(poseStack, buffer, font, face, facing,
-                            cu1, cv1, cu2, cv2, 0.005f,
-                            elem.label, elem.textColor, elem.bold, elem.textScale, packedLight);
-                }
+                // User requested: NO background box on text element, ONLY the text itself!
             }
         }
-
         poseStack.popPose();
+
+        // ====================================================================
+        // PASS 2: Render All In-World Text Labels (Buttons, Lamps, Text Panels)
+        // ====================================================================
+        Font font = Minecraft.getInstance().font;
+        for (int slot = 0; slot < TileControlPanel.TOTAL_SLOTS; slot++) {
+            TileControlPanel.PanelElement elem = panel.getElement(slot);
+            if (elem == null || elem.type == TileControlPanel.ElementType.NONE) continue;
+            if (elem.label == null || elem.label.trim().isEmpty()) continue;
+
+            int gx = slot % TileControlPanel.GRID_SIZE;
+            int gy = slot / TileControlPanel.GRID_SIZE;
+            int sizeX = Math.max(1, Math.min(8, elem.sizeX));
+            int sizeY = Math.max(1, Math.min(8, elem.sizeY));
+
+            float u1 = gx / 8.0f;
+            float v1 = gy / 8.0f;
+            float u2 = (gx + sizeX) / 8.0f;
+            float v2 = (gy + sizeY) / 8.0f;
+
+            float pad = 0.012f;
+            float cu1 = u1 + pad;
+            float cv1 = v1 + pad;
+            float cu2 = u2 - pad;
+            float cv2 = v2 - pad;
+
+            if (elem.type == TileControlPanel.ElementType.BUTTON) {
+                boolean pressed = (System.currentTimeMillis() - elem.lastPressTime) < 250;
+                float h2 = pressed ? 0.014f : 0.038f;
+                float capPad = 0.008f;
+                renderInWorldText(poseStack, buffer, font, face, facing,
+                        cu1 + capPad, cv1 + capPad, cu2 - capPad, cv2 - capPad, h2 + 0.002f,
+                        elem.label, elem.textColor, elem.bold, 0.85f);
+            } else if (elem.type == TileControlPanel.ElementType.LAMP) {
+                renderInWorldText(poseStack, buffer, font, face, facing,
+                        cu1, cv1, cu2, cv2, 0.008f,
+                        elem.label, elem.textColor, elem.bold, 0.85f);
+            } else if (elem.type == TileControlPanel.ElementType.TEXT) {
+                renderInWorldText(poseStack, buffer, font, face, facing,
+                        cu1, cv1, cu2, cv2, 0.005f,
+                        elem.label, elem.textColor, elem.bold, elem.textScale);
+            }
+        }
     }
 
     // ========================================================================
@@ -368,20 +397,11 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
     private static void renderInWorldText(PoseStack poseStack, MultiBufferSource buffer, Font font,
                                           AttachFace face, Direction facing,
                                           float cu1, float cv1, float cu2, float cv2, float h,
-                                          String text, int textColor, boolean bold, float textScale, int packedLight) {
-        if (text == null || text.isEmpty()) return;
+                                          String text, int textColor, boolean bold, float textScale) {
+        if (text == null || text.trim().isEmpty()) return;
 
         float uMid = (cu1 + cu2) * 0.5f;
         float vMid = (cv1 + cv2) * 0.5f;
-
-        float[] p0 = mapCoord(face, facing, 0, 0, 0);
-        float[] pu = mapCoord(face, facing, 1, 0, 0);
-        float[] pv = mapCoord(face, facing, 0, 1, 0);
-        float[] pn = mapCoord(face, facing, 0, 0, 1);
-
-        float ux_x = pu[0] - p0[0], ux_y = pu[1] - p0[1], ux_z = pu[2] - p0[2];
-        float vx_x = pv[0] - p0[0], vx_y = pv[1] - p0[1], vx_z = pv[2] - p0[2];
-        float nx_x = pn[0] - p0[0], nx_y = pn[1] - p0[1], nx_z = pn[2] - p0[2];
 
         float[] center = mapCoord(face, facing, uMid, vMid, h);
 
@@ -396,23 +416,47 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         // Keep text nicely contained inside bounds
         float textWInWorld = strWidth * scale;
         float textHInWorld = 9.0f * scale;
-        if (textWInWorld > boxW * 0.88f) {
-            scale *= (boxW * 0.88f) / textWInWorld;
+        if (textWInWorld > boxW * 0.90f) {
+            scale *= (boxW * 0.90f) / textWInWorld;
         }
-        if (textHInWorld > boxH * 0.88f) {
-            scale *= (boxH * 0.88f) / textHInWorld;
+        if (textHInWorld > boxH * 0.90f) {
+            scale *= (boxH * 0.90f) / textHInWorld;
         }
 
         poseStack.pushPose();
         poseStack.translate(center[0], center[1], center[2]);
 
-        Matrix4f rot = new Matrix4f(
-                ux_x * scale, vx_x * scale, nx_x * scale, 0,
-                ux_y * scale, vx_y * scale, nx_y * scale, 0,
-                ux_z * scale, vx_z * scale, nx_z * scale, 0,
-                0,            0,            0,            1
-        );
-        poseStack.last().pose().mul(rot);
+        // Orient poseStack according to face and facing
+        if (face == AttachFace.FLOOR) {
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90.0f));
+            switch (facing) {
+                case NORTH -> {}
+                case SOUTH -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
+                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(90.0f));
+                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(270.0f));
+                default    -> {}
+            }
+        } else if (face == AttachFace.CEILING) {
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0f));
+            switch (facing) {
+                case NORTH -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
+                case SOUTH -> {}
+                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(270.0f));
+                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(90.0f));
+                default    -> {}
+            }
+        } else { // WALL
+            switch (facing) {
+                case SOUTH -> {} // Normal +Z (facing south into room)
+                case NORTH -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
+                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
+                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(270.0f));
+                default    -> {}
+            }
+        }
+
+        // Standard Minecraft 3D font scaling: -scale flips Y for CCW upright glyphs
+        poseStack.scale(scale, -scale, scale);
 
         float drawX = -strWidth * 0.5f;
         float drawY = -4.5f;
@@ -427,7 +471,7 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                 buffer,
                 Font.DisplayMode.POLYGON_OFFSET,
                 0,
-                packedLight
+                0x00F000F0
         );
 
         poseStack.popPose();
@@ -472,11 +516,11 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
         } else { // WALL
             y = 1.0f - v;
             switch (facing) {
-                case NORTH -> { z = 0.0f - h; x = u; }
-                case SOUTH -> { z = 1.0f + h; x = 1.0f - u; }
-                case WEST  -> { x = 0.0f - h; z = 1.0f - u; }
-                case EAST  -> { x = 1.0f + h; z = u; }
-                default    -> { z = 0.0f - h; x = u; }
+                case SOUTH -> { z = 1.0f + h; x = u; }
+                case NORTH -> { z = 0.0f - h; x = 1.0f - u; }
+                case WEST  -> { x = 0.0f - h; z = u; }
+                case EAST  -> { x = 1.0f + h; z = 1.0f - u; }
+                default    -> { z = 1.0f + h; x = u; }
             }
         }
         return new float[]{x, y, z};

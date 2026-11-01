@@ -233,27 +233,31 @@ public class TileControlPanel extends TileEntityComputronics {
             }
         } else if (held.getItem() instanceof ItemSevenSegment) {
             int digits = ItemSevenSegment.getPlacementSize(held); // 1, 2, 3, or 4
-            if (mountElementWithSize(gx, gy, ElementType.SEVEN_SEGMENT, 0x00FFCC, digits, 1)) {
+            int placeX = Math.max(0, Math.min(gx, GRID_SIZE - digits));
+            if (mountElementWithSize(placeX, gy, ElementType.SEVEN_SEGMENT, 0x00FFCC, digits, 1)) {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.4f);
-                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %d-Digit 7-Segment Display (1x%d) at (%d, %d)", digits, digits, gx, gy)), true);
+                player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %d-Digit 7-Segment Display (1x%d) at (%d, %d)", digits, digits, placeX, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         } else if (held.getItem() instanceof ItemPanelText) {
             int[] dims = ItemPanelText.getPlacementDimensions(held);
             int sx = dims[0];
             int sy = dims[1];
-            if (mountElementWithSize(gx, gy, ElementType.TEXT, 0x1E2228, sx, sy)) {
-                PanelElement elem = findRootElement(gx, gy);
+            int placeX = Math.max(0, Math.min(gx, GRID_SIZE - sx));
+            int placeY = Math.max(0, Math.min(gy, GRID_SIZE - sy));
+            if (mountElementWithSize(placeX, placeY, ElementType.TEXT, 0x00FFCC, sx, sy)) {
+                PanelElement elem = findRootElement(placeX, placeY);
                 if (elem != null) {
                     elem.label = "TEXT";
                     elem.textColor = 0x00FFCC;
                     elem.bold = true;
                     elem.active = true;
+                    markChangedAndSync();
                 }
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.3f);
-                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Text Component at (%d, %d)", sx, sy, gx, gy)), true);
+                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Text Component at (%d, %d)", sx, sy, placeX, placeY)), true);
                 return ItemInteractionResult.SUCCESS;
             }
         }
@@ -601,7 +605,7 @@ public class TileControlPanel extends TileEntityComputronics {
         int slot = args.checkInteger(0) - 1;
         if (slot < 0 || slot >= TOTAL_SLOTS) return new Object[]{false, "invalid slot"};
         PanelElement elem = elements[slot];
-        if (elem.type != ElementType.TEXT && elem.type != ElementType.BUTTON) {
+        if (elem.type != ElementType.TEXT && elem.type != ElementType.BUTTON && elem.type != ElementType.LAMP) {
             return new Object[]{false, "element does not support text"};
         }
         elem.label = args.checkString(1);

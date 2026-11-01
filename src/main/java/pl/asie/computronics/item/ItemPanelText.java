@@ -102,13 +102,16 @@ public class ItemPanelText extends Item {
                     int[] dims = getPlacementDimensions(stack);
                     int w = dims[0];
                     int h = dims[1];
-                    if (panel.mountElementWithSize(grid[0], grid[1], TileControlPanel.ElementType.TEXT, 0x1E2228, w, h)) {
-                        int slot = panel.getSlotIndex(grid[0], grid[1]);
+                    int placeX = Math.max(0, Math.min(grid[0], TileControlPanel.GRID_SIZE - w));
+                    int placeY = Math.max(0, Math.min(grid[1], TileControlPanel.GRID_SIZE - h));
+                    if (panel.mountElementWithSize(placeX, placeY, TileControlPanel.ElementType.TEXT, 0x00FFCC, w, h)) {
+                        int slot = panel.getSlotIndex(placeX, placeY);
                         TileControlPanel.PanelElement elem = panel.getElement(slot);
                         if (elem != null) {
                             elem.label = "TEXT";
                             elem.textColor = 0x00FFCC;
                             elem.bold = true;
+                            elem.active = true;
                             panel.markChangedAndSync();
                         }
 
@@ -117,7 +120,7 @@ public class ItemPanelText extends Item {
                         }
                         level.playSound(null, pos, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.3f);
                         if (player != null) {
-                            player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fУстановлена текстовая метка §6%dx%d §fв (%d, %d)", w, h, grid[0], grid[1])), true);
+                            player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fУстановлена текстовая метка §6%dx%d §fв (%d, %d)", w, h, placeX, placeY)), true);
                         }
                         return InteractionResult.sidedSuccess(level.isClientSide());
                     } else if (player != null && !level.isClientSide()) {
