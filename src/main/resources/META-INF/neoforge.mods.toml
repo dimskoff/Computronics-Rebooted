@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="computronics"
-version="2.0.0-dev.1"
+version="2.0.0-beta.1"
 displayName="Computronics: Rebooted"
 authors="asie, Vexatos, Dimsk"
 description="Computronics: Rebooted for Minecraft 1.21.1 NeoForge. Advanced networking, acoustics, sensors, tapes and robotics for OpenComputers."

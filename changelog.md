@@ -1,3 +1,39 @@
+==== 2.0.0-beta.1 ====
+
+Welcome to Computronics: Rebooted for Minecraft 1.21.1 NeoForge!
+This massive modern release brings industrial computing, modular tactile physical interfaces, server rack infrastructure, digital tape streaming, and crystal-clear speech synthesis to the modern era of Minecraft.
+
+  * ADDED: Modular Control Panel System!
+    - Ultra-thin 2-voxel surface mounting against floors, ceilings, and walls.
+    - 8x8 tactile grid for mounting buttons, toggle switches, indicator lamps, 7-segment displays, and text labels.
+    - Screwdriver tool with full 350x240 dark-industrial configuration GUI, live preview, color swatches, HUD slot inspection, and safe component dismantling on left-click.
+    - Slanted (~6.3°) trapezoid 7-segment displays in 1x1, 1x2, 1x3, 1x4 configurations with authentic unlit traces.
+    - Multi-line text labels (up to 4 lines with independent RGB color pickers).
+    - Pure 3D text panel component without bulky borders.
+    - Full OpenComputers network bus integration with `panel_button` and `panel_switch` signals.
+  * ADDED: Server Rack Expansion Architecture!
+    - Rack Light Board with 5 animated status modes (NORMAL, INVERTED, OFF, ALL_ON, PULSE).
+    - Rack Switch Board with 4 interactive toggle switches and `switch_flipped` network bus events.
+    - High-density Rack Capacitor (50,000 EU).
+    - Rack Detonator Board with server-side anti-griefing block damage prevention toggle.
+    - Hardware Cryptographic Co-Processor for accelerated hashing and cipher operations.
+  * ADDED: Wireless Monitor (Handheld Widescreen Tablet)!
+    - Ergonomic 16:10 landscape widescreen tablet model held in player's right hand.
+    - Firmware EEPROM flashing support via Shift+Right-Click with EEPROM in hand.
+    - Wireless network telemetry and remote control.
+  * ADDED: Clean Text-to-Speech Engine!
+    - Speech Box block and robot upgrade supporting clear narrator voice in Russian and English with zero annoying legacy phoneme beeps.
+  * ADDED: Exhaustive Server & Client Configuration System!
+    - `computronics-common.toml` featuring individual toggles for every block, handheld device, and rack board.
+    - Anti-Griefing toggles (`cardBoomAllowBlockDamage = false`, `rackBoomAllowBlockDamage = false`) to prevent world destruction on multiplayer servers.
+    - Chat Box distance limits, cross-dimension toggles, and cooldowns.
+    - Radar and Entity Detector balancing controls (hide exact player coordinates for PvP servers).
+    - Rate limits and audio buffer configuration.
+    - `computronics-client.toml` with render distance culling for panel text and toggleable GUI world blur.
+  * ADDED: Tape Drive and Digital DFN Audio Cassette Streaming!
+  * ADDED: Organized Creative Mode Tabs and comprehensive Wiki & Configuration documentation.
+  * REMOVED: Deprecated KVM module.
+
 ==== 1.6.6 ====
 
 This update drops 1.12.1 in favour of 1.12.2. The update also drops support for 1.8.9, 1.9.4 and 1.11.2.
