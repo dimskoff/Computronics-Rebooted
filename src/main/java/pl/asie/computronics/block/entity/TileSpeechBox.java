@@ -47,41 +47,6 @@ public class TileSpeechBox extends TileEntityComputronics {
     @Override
     public void tickServer(Level level, BlockPos pos, BlockState state) {
         super.tickServer(level, pos, state);
-
-        if (!phonemeQueue.isEmpty()) {
-            phonemeTimer++;
-            if (phonemeTimer >= 2) {
-                phonemeTimer = 0;
-                char c = phonemeQueue.poll();
-                if (!Character.isWhitespace(c)) {
-                    playPhoneme(c);
-                }
-            }
-        }
-    }
-
-    private void playPhoneme(char c) {
-        if (level == null) return;
-        c = Character.toLowerCase(c);
-
-        float charPitch = basePitch;
-        if ("aeiouy".indexOf(c) >= 0) {
-            charPitch = (float) (basePitch * (1.1 + (c % 5) * 0.15));
-        } else if (Character.isLetter(c)) {
-            charPitch = (float) (basePitch * (0.7 + (c % 7) * 0.08));
-        }
-
-        charPitch = Math.max(0.5f, Math.min(2.0f, charPitch));
-
-        level.playSound(null, worldPosition, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, volume * 1.5f, charPitch);
-
-        if (level instanceof ServerLevel sl) {
-            Direction facing = getFacing();
-            double px = worldPosition.getX() + 0.5 + facing.getStepX() * 0.55;
-            double py = worldPosition.getY() + 0.5;
-            double pz = worldPosition.getZ() + 0.5 + facing.getStepZ() * 0.55;
-            sl.sendParticles(ParticleTypes.NOTE, px, py, pz, 1, (double) (charPitch * 10) / 24.0, 0, 0, 1.0);
-        }
     }
 
     @Callback(doc = "function(text:string [, pitch:number]):boolean -- Speaks the text aloud via phonetic robotic voice synthesizer.")
@@ -97,16 +62,11 @@ public class TileSpeechBox extends TileEntityComputronics {
         }
 
         this.currentSpeech = text;
-        this.phonemeQueue.clear();
-        for (char c : text.toCharArray()) {
-            this.phonemeQueue.add(c);
-        }
 
         // Broadcast real TTS to nearby players within 32 blocks
         if (level instanceof ServerLevel sl) {
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(sl, new net.minecraft.world.level.ChunkPos(worldPosition),
                     new pl.asie.computronics.network.SpeechBoxPayload(worldPosition, text, basePitch, volume));
-            level.playSound(null, worldPosition, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, 0.4f, 1.2f);
         }
 
         return new Object[]{true};

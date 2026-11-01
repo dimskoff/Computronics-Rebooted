@@ -55,6 +55,8 @@ public class ModItems {
             () -> new ItemToggleSwitch(new Item.Properties()));
     public static final DeferredItem<pl.asie.computronics.item.ItemSevenSegment> SEVEN_SEGMENT = ITEMS.register("seven_segment",
             () -> new pl.asie.computronics.item.ItemSevenSegment(new Item.Properties()));
+    public static final DeferredItem<pl.asie.computronics.item.ItemPanelText> PANEL_TEXT = ITEMS.register("panel_text",
+            () -> new pl.asie.computronics.item.ItemPanelText(new Item.Properties()));
     public static final DeferredItem<pl.asie.computronics.item.ItemScrewdriver> SCREWDRIVER = ITEMS.register("screwdriver",
             () -> new pl.asie.computronics.item.ItemScrewdriver(new Item.Properties()));
 

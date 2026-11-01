@@ -31,18 +31,18 @@ public class ControlPanelConfigScreen extends Screen {
     private Button boldBtn;
 
     private static final int[] PRESET_COLORS = {
-            0xCC2020, // Red
-            0x20CC40, // Green
-            0x2060CC, // Blue
-            0xCCCC20, // Yellow
-            0xCC7020, // Orange
-            0x8020CC, // Purple
-            0x20CCCC, // Cyan
+            0xCC2020, // Industrial Red
+            0x20CC40, // Neon Green
+            0x2080EE, // Terminal Blue
+            0xCCCC20, // Warning Amber / Yellow
+            0xCC7020, // Hazard Orange
+            0x8020CC, // Synth Purple
+            0x00FFCC, // Cyber Cyan
             0xCC2080, // Magenta
-            0xEEEEEE, // White
-            0x404040, // Gunmetal Dark
-            0x60EE20, // Lime
-            0xEE5050  // Coral
+            0xEEEEEE, // Industrial White
+            0x383E48, // Gunmetal Dark
+            0x60EE20, // Lime Green
+            0xEE4040  // Bright Coral
     };
 
     public static void open(TileControlPanel panel, int slot) {
@@ -68,19 +68,36 @@ public class ControlPanelConfigScreen extends Screen {
     protected void init() {
         int cx = width / 2;
         int cy = height / 2;
-        int panelW = 280;
-        int panelH = 220;
+        int panelW = 350;
+        int panelH = 240;
         int left = cx - panelW / 2;
         int top = cy - panelH / 2;
 
-        // Label Edit Box
-        labelEdit = new EditBox(font, left + 75, top + 35, 120, 16, Component.literal("Label"));
-        labelEdit.setMaxLength(16);
-        labelEdit.setValue(labelText);
-        addRenderableWidget(labelEdit);
+        boolean isText = elem != null && elem.type == TileControlPanel.ElementType.TEXT;
+        boolean isButton = elem != null && elem.type == TileControlPanel.ElementType.BUTTON;
+        boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
+
+        // Label / Text Input
+        if (isText || isButton) {
+            labelEdit = new EditBox(font, left + 55, top + 34, 115, 16, Component.literal("Text"));
+            labelEdit.setMaxLength(32);
+            labelEdit.setValue(labelText);
+            addRenderableWidget(labelEdit);
+
+            boldBtn = Button.builder(Component.literal(bold ? "Bold: ON" : "Bold: OFF"), b -> {
+                bold = !bold;
+                b.setMessage(Component.literal(bold ? "Bold: ON" : "Bold: OFF"));
+            }).bounds(left + 175, top + 34, 55, 16).build();
+            addRenderableWidget(boldBtn);
+        } else if (isSevenSeg) {
+            displayValueEdit = new EditBox(font, left + 55, top + 34, 115, 16, Component.literal("Value"));
+            displayValueEdit.setMaxLength(16);
+            displayValueEdit.setValue(displayValueText);
+            addRenderableWidget(displayValueEdit);
+        }
 
         // Hex Color Input
-        hexColorEdit = new EditBox(font, left + 75, top + 60, 60, 16, Component.literal("Hex"));
+        hexColorEdit = new EditBox(font, left + 55, top + 56, 60, 16, Component.literal("Hex"));
         hexColorEdit.setMaxLength(7);
         hexColorEdit.setValue(String.format("#%06X", selectedColor & 0xFFFFFF));
         hexColorEdit.setResponder(val -> {
@@ -93,91 +110,86 @@ public class ControlPanelConfigScreen extends Screen {
         });
         addRenderableWidget(hexColorEdit);
 
-        // Display Value input for 7-segment
-        if (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
-            displayValueEdit = new EditBox(font, left + 75, top + 85, 80, 16, Component.literal("Value"));
-            displayValueEdit.setMaxLength(8);
-            displayValueEdit.setValue(displayValueText);
-            addRenderableWidget(displayValueEdit);
-        }
-
-        // Bold Button
-        boldBtn = Button.builder(Component.literal("Bold: " + (bold ? "ON" : "OFF")), b -> {
-            bold = !bold;
-            b.setMessage(Component.literal("Bold: " + (bold ? "ON" : "OFF")));
-        }).bounds(left + 200, top + 35, 70, 16).build();
-        addRenderableWidget(boldBtn);
-
         // Size / Digit Buttons
-        if (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
-            // Horizontal multi-digit 7-segment display: 1x1, 1x2, 1x3, 1x4
+        int sizeRowY = top + 78;
+        if (isSevenSeg) {
             for (int digits = 1; digits <= 4; digits++) {
                 final int d = digits;
-                int btnX = left + 75 + (digits - 1) * 38;
-                int btnY = top + 110;
+                int btnX = left + 55 + (digits - 1) * 38;
                 Button sizeBtn = Button.builder(Component.literal("1x" + d), b -> {
                     selectedSizeX = d;
                     selectedSizeY = 1;
-                }).bounds(btnX, btnY, 34, 16).build();
+                }).bounds(btnX, sizeRowY, 34, 16).build();
+                addRenderableWidget(sizeBtn);
+            }
+        } else if (isText) {
+            int[][] textSizes = {{1, 1}, {2, 1}, {4, 1}, {8, 1}, {2, 2}, {4, 2}};
+            for (int idx = 0; idx < textSizes.length; idx++) {
+                final int sx = textSizes[idx][0];
+                final int sy = textSizes[idx][1];
+                int btnX = left + 45 + idx * 30;
+                Button sizeBtn = Button.builder(Component.literal(sx + "x" + sy), b -> {
+                    selectedSizeX = sx;
+                    selectedSizeY = sy;
+                }).bounds(btnX, sizeRowY, 28, 16).build();
                 addRenderableWidget(sizeBtn);
             }
         } else {
-            // Square buttons / lamps / switches: 1x1, 2x2, 3x3, 4x4
             int maxS = (elem != null && elem.type == TileControlPanel.ElementType.SWITCH) ? 2 : 4;
             for (int sz = 1; sz <= maxS; sz++) {
                 final int s = sz;
-                int btnX = left + 75 + (sz - 1) * 38;
-                int btnY = top + 90;
+                int btnX = left + 55 + (sz - 1) * 38;
                 Button sizeBtn = Button.builder(Component.literal(s + "x" + s), b -> {
                     selectedSizeX = s;
                     selectedSizeY = s;
-                }).bounds(btnX, btnY, 34, 16).build();
+                }).bounds(btnX, sizeRowY, 34, 16).build();
                 addRenderableWidget(sizeBtn);
             }
         }
 
-        // Color preset chips buttons
-        int chipY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 135 : 115);
+        // Color preset buttons
+        int chipStartY = top + 118;
         for (int i = 0; i < PRESET_COLORS.length; i++) {
             final int col = PRESET_COLORS[i];
-            int chipX = left + 20 + (i % 6) * 42;
+            int colIdx = i % 6;
             int row = i / 6;
-            int currentChipY = chipY + row * 18;
+            int chipX = left + 18 + colIdx * 35;
+            int currentChipY = chipStartY + row * 18;
+
             Button chip = Button.builder(Component.literal(""), b -> {
                 selectedColor = col;
                 hexColorEdit.setValue(String.format("#%06X", col & 0xFFFFFF));
-            }).bounds(chipX, currentChipY, 36, 16).build();
+            }).bounds(chipX, currentChipY, 32, 15).build();
             addRenderableWidget(chip);
         }
 
         // Action Buttons at bottom
-        int botY = top + panelH - 30;
+        int botY = top + panelH - 28;
 
         Button applyBtn = Button.builder(Component.literal("Apply & Save"), b -> {
             applyAndClose();
-        }).bounds(left + 15, botY, 80, 20).build();
+        }).bounds(left + 20, botY, 95, 20).build();
         addRenderableWidget(applyBtn);
 
-        Button removeBtn = Button.builder(Component.literal("Remove"), b -> {
+        Button removeBtn = Button.builder(Component.literal("Remove Element"), b -> {
             PacketDistributor.sendToServer(new RemovePanelElementPayload(panel.getBlockPos(), slot));
             if (elem != null) {
                 elem.type = TileControlPanel.ElementType.NONE;
             }
             onClose();
-        }).bounds(left + 100, botY, 75, 20).build();
+        }).bounds(left + 125, botY, 100, 20).build();
         addRenderableWidget(removeBtn);
 
         Button cancelBtn = Button.builder(Component.literal("Cancel"), b -> {
             onClose();
-        }).bounds(left + 185, botY, 80, 20).build();
+        }).bounds(left + 235, botY, 95, 20).build();
         addRenderableWidget(cancelBtn);
     }
 
     private void applyAndClose() {
-        String label = labelEdit.getValue();
+        String label = labelEdit != null ? labelEdit.getValue() : "";
         String disp = displayValueEdit != null ? displayValueEdit.getValue() : "";
 
-        // Immediate client local update
         if (elem != null) {
             elem.color = selectedColor;
             elem.sizeX = selectedSizeX;
@@ -190,7 +202,6 @@ public class ControlPanelConfigScreen extends Screen {
             }
         }
 
-        // Sync to server via network packet
         PacketDistributor.sendToServer(new ConfigurePanelPayload(
                 panel.getBlockPos(),
                 slot,
@@ -207,89 +218,142 @@ public class ControlPanelConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Render crisp dark gradient overlay - NO BLUR SHADER
+        g.fillGradient(0, 0, width, height, 0x990A0D12, 0xBB0A0D12);
 
         int cx = width / 2;
         int cy = height / 2;
-        int panelW = 280;
-        int panelH = 220;
+        int panelW = 350;
+        int panelH = 240;
         int left = cx - panelW / 2;
         int top = cy - panelH / 2;
 
-        // Dark industrial background
-        g.fill(left, top, left + panelW, top + panelH, 0xEE1E2228);
-        g.renderOutline(left, top, panelW, panelH, 0xFF4A5568);
-        g.fill(left + 1, top + 1, left + panelW - 1, top + 22, 0xFF2D3748);
+        // Dark Industrial Window Frame
+        g.fill(left, top, left + panelW, top + panelH, 0xFF14181F);
+        g.renderOutline(left, top, panelW, panelH, 0xFF3E4856);
+        g.fill(left + 1, top + 1, left + panelW - 1, top + 22, 0xFF1F242D);
+        g.hLine(left + 1, left + panelW - 1, top + 22, 0xFF3E4856);
 
         // Header Title
         String elemName = elem != null ? elem.type.name() : "ELEMENT";
-        g.drawString(font, "CONFIGURING: " + elemName + " [SLOT #" + (slot + 1) + "]", left + 10, top + 7, 0x00FFCC, false);
+        g.drawString(font, "CONTROL PANEL: " + elemName + " [#" + (slot + 1) + "]", left + 10, top + 7, 0x00FFCC, false);
 
         // Field Labels
-        g.drawString(font, "Label:", left + 20, top + 39, 0xA0AEC0, false);
-        g.drawString(font, "Color:", left + 20, top + 64, 0xA0AEC0, false);
-        if (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
-            g.drawString(font, "Value:", left + 20, top + 89, 0xA0AEC0, false);
+        boolean isText = elem != null && elem.type == TileControlPanel.ElementType.TEXT;
+        boolean isSevenSeg = elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT;
+
+        if (isText || (elem != null && elem.type == TileControlPanel.ElementType.BUTTON)) {
+            g.drawString(font, "Text:", left + 18, top + 38, 0x8FA0B4, false);
+        } else if (isSevenSeg) {
+            g.drawString(font, "Value:", left + 18, top + 38, 0x8FA0B4, false);
         }
-        int sizeY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 114 : 94);
-        g.drawString(font, (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? "Digits:" : "Size:"), left + 20, sizeY, 0xA0AEC0, false);
 
-        // Color sample box
-        g.fill(left + 140, top + 60, left + 175, top + 76, 0xFF000000 | selectedColor);
-        g.renderOutline(left + 140, top + 60, 35, 16, 0xFFE2E8F0);
+        g.drawString(font, "Color:", left + 18, top + 60, 0x8FA0B4, false);
+        g.drawString(font, isSevenSeg ? "Digits:" : "Size:", left + 18, top + 82, 0x8FA0B4, false);
+        g.drawString(font, "Palette:", left + 18, top + 104, 0x8FA0B4, false);
 
-        // Live Preview Box
-        int prevX = left + 200;
-        int prevY = top + 60;
-        g.fill(prevX, prevY, prevX + 68, prevY + 68, 0xFF14181E);
-        g.renderOutline(prevX, prevY, 68, 68, 0xFF718096);
-        g.drawString(font, "PREVIEW", prevX + 14, prevY + 4, 0x718096, false);
+        // Color sample box next to hex input
+        g.fill(left + 120, top + 56, left + 160, top + 72, 0xFF000000 | selectedColor);
+        g.renderOutline(left + 120, top + 56, 40, 16, 0xFF718096);
+
+        // Dedicated Preview Window on the Right
+        int prevX = left + 240;
+        int prevY = top + 34;
+        int prevW = 96;
+        int prevH = 120;
+        g.fill(prevX, prevY, prevX + prevW, prevY + prevH, 0xFF0D1015);
+        g.renderOutline(prevX, prevY, prevW, prevH, 0xFF333B47);
+        g.drawString(font, "PREVIEW", prevX + (prevW - font.width("PREVIEW")) / 2, prevY + 5, 0x566375, false);
 
         // Render preview inside
-        if (elem != null && elem.type == TileControlPanel.ElementType.BUTTON) {
-            int pColor = 0xFF000000 | selectedColor;
-            int btnBoxSize = Math.min(48, 16 * selectedSizeX);
-            int bx = prevX + (68 - btnBoxSize) / 2;
-            int by = prevY + 16 + (48 - btnBoxSize) / 2;
-            g.fill(bx, by, bx + btnBoxSize, by + btnBoxSize, pColor);
-            g.renderOutline(bx, by, btnBoxSize, btnBoxSize, 0xFFFFFFFF);
-            String lbl = labelEdit.getValue();
-            if (!lbl.isEmpty()) {
-                int lw = font.width(lbl);
-                g.drawString(font, lbl, bx + (btnBoxSize - lw) / 2, by + (btnBoxSize - 8) / 2, 0xFFFFFFFF, bold);
-            }
-        } else if (elem != null && elem.type == TileControlPanel.ElementType.SWITCH) {
-            int pColor = 0xFF000000 | selectedColor;
-            int bx = prevX + 22;
-            int by = prevY + 22;
-            g.fill(bx, by, bx + 24, by + 36, 0xFF282828);
-            g.renderOutline(bx, by, 24, 36, 0xFF707070);
-            g.fill(bx + 4, by + 4, bx + 20, by + 18, pColor); // toggle up
-        } else if (elem != null && elem.type == TileControlPanel.ElementType.LAMP) {
-            int pColor = 0xFF000000 | selectedColor;
-            int lampR = Math.min(22, 8 * selectedSizeX);
-            int lx = prevX + 34;
-            int ly = prevY + 40;
-            g.fill(lx - lampR, ly - lampR, lx + lampR, ly + lampR, pColor);
-            g.renderOutline(lx - lampR, ly - lampR, lampR * 2, lampR * 2, 0xFFFFFFFF);
-            g.fill(lx - lampR / 2, ly - lampR / 2, lx + lampR / 2, ly + lampR / 2, 0x88FFFFFF);
-        } else if (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
-            int pColor = 0xFF000000 | selectedColor;
-            String val = displayValueEdit != null ? displayValueEdit.getValue() : "8";
-            int vw = font.width(val);
-            g.drawString(font, val, prevX + (68 - vw) / 2, prevY + 36, pColor, true);
-        }
+        renderPreviewElement(g, prevX, prevY + 18, prevW, prevH - 22);
 
         super.render(g, mouseX, mouseY, partialTick);
 
-        // Overlay colored rectangles over the preset buttons so the player sees the colors
-        int chipY = top + (elem != null && elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT ? 135 : 115);
+        // Draw color fills over the palette preset buttons
+        int chipStartY = top + 118;
         for (int i = 0; i < PRESET_COLORS.length; i++) {
-            int chipX = left + 20 + (i % 6) * 42;
+            int colIdx = i % 6;
             int row = i / 6;
-            int currentChipY = chipY + row * 18;
-            g.fill(chipX + 3, currentChipY + 3, chipX + 33, currentChipY + 13, 0xFF000000 | PRESET_COLORS[i]);
-            g.renderOutline(chipX + 2, currentChipY + 2, 32, 12, 0xFF000000);
+            int chipX = left + 18 + colIdx * 35;
+            int currentChipY = chipStartY + row * 18;
+            g.fill(chipX + 2, currentChipY + 2, chipX + 30, currentChipY + 13, 0xFF000000 | PRESET_COLORS[i]);
+            g.renderOutline(chipX + 2, currentChipY + 2, 28, 11, 0xFF000000);
+        }
+    }
+
+    private void renderPreviewElement(GuiGraphics g, int px, int py, int pw, int ph) {
+        if (elem == null) return;
+        int pColor = 0xFF000000 | selectedColor;
+
+        switch (elem.type) {
+            case BUTTON -> {
+                int btnSize = Math.min(50, 18 * selectedSizeX);
+                int bx = px + (pw - btnSize) / 2;
+                int by = py + (ph - btnSize) / 2;
+                g.fill(bx, by, bx + btnSize, by + btnSize, pColor);
+                g.renderOutline(bx, by, btnSize, btnSize, 0xFFE2E8F0);
+                g.fill(bx + 2, by + 2, bx + btnSize - 2, by + 4, 0x88FFFFFF);
+                String lbl = labelEdit != null ? labelEdit.getValue() : "";
+                if (!lbl.isEmpty()) {
+                    int lw = font.width(lbl);
+                    float scale = 1.0f;
+                    if (lw > btnSize - 6) {
+                        scale = (float)(btnSize - 6) / lw;
+                    }
+                    g.pose().pushPose();
+                    g.pose().translate(bx + btnSize / 2.0f, by + btnSize / 2.0f - 4, 0);
+                    g.pose().scale(scale, scale, 1.0f);
+                    g.drawString(font, lbl, -lw / 2, 0, 0xFFFFFFFF, bold);
+                    g.pose().popPose();
+                }
+            }
+            case SWITCH -> {
+                int bx = px + (pw - 26) / 2;
+                int by = py + (ph - 42) / 2;
+                g.fill(bx, by, bx + 26, by + 42, 0xFF24272D);
+                g.renderOutline(bx, by, 26, 42, 0xFF4A5568);
+                g.fill(bx + 3, by + 4, bx + 23, by + 22, pColor); // rocker up
+                g.fill(bx + 11, by + 8, bx + 15, by + 12, 0xFF00FFCC); // LED dot
+            }
+            case LAMP -> {
+                int lampSize = Math.min(46, 16 * selectedSizeX);
+                int lx = px + (pw - lampSize) / 2;
+                int ly = py + (ph - lampSize) / 2;
+                g.fill(lx, ly, lx + lampSize, ly + lampSize, pColor);
+                g.renderOutline(lx, ly, lampSize, lampSize, 0xFFFFFFFF);
+                g.fill(lx + 4, ly + 4, lx + lampSize - 4, ly + lampSize - 4, 0x66FFFFFF);
+            }
+            case SEVEN_SEGMENT -> {
+                String val = displayValueEdit != null && !displayValueEdit.getValue().isEmpty() ? displayValueEdit.getValue() : "8";
+                int digits = Math.max(1, selectedSizeX);
+                int slotW = pw / digits;
+                for (int i = 0; i < Math.min(digits, val.length()); i++) {
+                    String d = String.valueOf(val.charAt(i));
+                    int dx = px + i * slotW + (slotW - font.width(d)) / 2;
+                    g.drawString(font, d, dx, py + ph / 2 - 4, pColor, true);
+                }
+            }
+            case TEXT -> {
+                int tw = Math.min(pw - 8, selectedSizeX * 12);
+                int th = Math.min(ph - 12, selectedSizeY * 18);
+                int tx = px + (pw - tw) / 2;
+                int ty = py + (ph - th) / 2;
+                g.fill(tx, ty, tx + tw, ty + th, 0xFF1C2026);
+                g.renderOutline(tx, ty, tw, th, 0xFF404854);
+                String txt = labelEdit != null && !labelEdit.getValue().isEmpty() ? labelEdit.getValue() : "TEXT";
+                int strW = font.width(txt);
+                float scale = 1.0f;
+                if (strW > tw - 4) {
+                    scale = (float)(tw - 4) / strW;
+                }
+                g.pose().pushPose();
+                g.pose().translate(tx + tw / 2.0f, ty + th / 2.0f - 4 * scale, 0);
+                g.pose().scale(scale, scale, 1.0f);
+                g.drawString(font, txt, -strW / 2, 0, pColor, bold);
+                g.pose().popPose();
+            }
+            default -> {}
         }
     }
 

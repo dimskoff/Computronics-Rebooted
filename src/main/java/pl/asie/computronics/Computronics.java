@@ -46,6 +46,19 @@ public class Computronics {
         // Register game event listeners
         NeoForge.EVENT_BUS.register(TileChatBox.ChatEventHandler.INSTANCE);
         NeoForge.EVENT_BUS.addListener(this::serverStarting);
+        NeoForge.EVENT_BUS.addListener(this::onLeftClickBlock);
+    }
+
+    private void onLeftClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock event) {
+        if (event.getItemStack().getItem() instanceof pl.asie.computronics.item.ItemScrewdriver) {
+            net.minecraft.world.level.block.state.BlockState state = event.getLevel().getBlockState(event.getPos());
+            if (state.getBlock() instanceof pl.asie.computronics.block.BlockControlPanel) {
+                event.setCanceled(true);
+                if (!event.getLevel().isClientSide()) {
+                    pl.asie.computronics.block.BlockControlPanel.dismantleAt(event.getLevel(), event.getPos(), state, event.getEntity());
+                }
+            }
+        }
     }
 
     private void serverStarting(final net.neoforged.neoforge.event.server.ServerStartingEvent event) {

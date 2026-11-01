@@ -136,6 +136,42 @@ public class BlockControlPanel extends BlockComputronics {
     }
 
     @Override
+    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
+        if (player.getMainHandItem().getItem() instanceof pl.asie.computronics.item.ItemScrewdriver) {
+            if (!level.isClientSide()) {
+                dismantleAt(level, pos, state, player);
+            }
+            return;
+        }
+        super.attack(state, level, pos, player);
+    }
+
+    public static boolean dismantleAt(Level level, BlockPos pos, BlockState state, Player player) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof TileControlPanel panel) {
+            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
+            int[] grid = null;
+            if (hit instanceof BlockHitResult bhr && bhr.getBlockPos().equals(pos)) {
+                grid = calculateGrid(state, pos, bhr.getLocation());
+            } else if (hit != null) {
+                grid = calculateGrid(state, pos, hit.getLocation());
+            }
+            if (grid != null) {
+                TileControlPanel.PanelElement elem = panel.findRootElement(grid[0], grid[1]);
+                if (elem != null && elem.type != TileControlPanel.ElementType.NONE) {
+                    String typeName = elem.type.name();
+                    int slot1 = elem.slot + 1;
+                    panel.removeElementAndDrop(elem.slot, player);
+                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ITEM_FRAME_REMOVE_ITEM, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.1f);
+                    player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[Control Panel] §fДемонтирован компонент: §e" + typeName + " §7(Слот #" + slot1 + ")"), true);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new TileControlPanel(pos, state);
     }

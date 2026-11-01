@@ -44,37 +44,6 @@ public class EnvironmentSpeechUpgrade extends AbstractManagedEnvironment {
     @Override
     public void update() {
         super.update();
-        if (!phonemeQueue.isEmpty()) {
-            phonemeTimer++;
-            if (phonemeTimer >= 2) {
-                phonemeTimer = 0;
-                char c = phonemeQueue.poll();
-                if (!Character.isWhitespace(c)) {
-                    playPhoneme(c);
-                }
-            }
-        }
-    }
-
-    private void playPhoneme(char c) {
-        Level level = host != null ? host.getEnvironmentLevel() : null;
-        if (level == null || level.isClientSide) return;
-        c = Character.toLowerCase(c);
-
-        float charPitch = basePitch;
-        if ("aeiouy".indexOf(c) >= 0) {
-            charPitch = (float) (basePitch * (1.1 + (c % 5) * 0.15));
-        } else if (Character.isLetter(c)) {
-            charPitch = (float) (basePitch * (0.7 + (c % 7) * 0.08));
-        }
-        charPitch = Math.max(0.5f, Math.min(2.0f, charPitch));
-
-        level.playSound(null, host.xPosition(), host.yPosition(), host.zPosition(),
-                SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.BLOCKS, volume * 1.5f, charPitch);
-
-        if (level instanceof ServerLevel sl) {
-            sl.sendParticles(ParticleTypes.NOTE, host.xPosition(), host.yPosition() + 0.5, host.zPosition(), 1, (double) (charPitch * 10) / 24.0, 0, 0, 1.0);
-        }
     }
 
     @Callback(doc = "function(text:string [, pitch:number]):boolean -- Speaks text aloud via robotic voice synthesizer.")
@@ -86,11 +55,6 @@ public class EnvironmentSpeechUpgrade extends AbstractManagedEnvironment {
         if (text.length() > 256) text = text.substring(0, 256);
         if (args.count() >= 2) {
             this.basePitch = (float) Math.max(0.5, Math.min(args.checkDouble(1), 2.0));
-        }
-
-        this.phonemeQueue.clear();
-        for (char c : text.toCharArray()) {
-            this.phonemeQueue.add(c);
         }
 
         BlockPos hostPos = new BlockPos((int) host.xPosition(), (int) host.yPosition(), (int) host.zPosition());

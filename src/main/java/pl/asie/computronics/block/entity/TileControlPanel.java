@@ -48,7 +48,8 @@ public class TileControlPanel extends TileEntityComputronics {
         BUTTON,
         LAMP,
         SEVEN_SEGMENT,
-        SWITCH
+        SWITCH,
+        TEXT
     }
 
     public static class PanelElement {
@@ -65,6 +66,7 @@ public class TileControlPanel extends TileEntityComputronics {
         public int textColor = 0xFFFFFF;
         public boolean bold = true;
         public String displayValue = "0";
+        public float textScale = 1.0f;
     }
 
     private final PanelElement[] elements = new PanelElement[TOTAL_SLOTS];
@@ -237,6 +239,23 @@ public class TileControlPanel extends TileEntityComputronics {
                 player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %d-Digit 7-Segment Display (1x%d) at (%d, %d)", digits, digits, gx, gy)), true);
                 return ItemInteractionResult.SUCCESS;
             }
+        } else if (held.getItem() instanceof ItemPanelText) {
+            int[] dims = ItemPanelText.getPlacementDimensions(held);
+            int sx = dims[0];
+            int sy = dims[1];
+            if (mountElementWithSize(gx, gy, ElementType.TEXT, 0x1E2228, sx, sy)) {
+                PanelElement elem = findRootElement(gx, gy);
+                if (elem != null) {
+                    elem.label = "TEXT";
+                    elem.textColor = 0x00FFCC;
+                    elem.bold = true;
+                    elem.active = true;
+                }
+                if (!player.isCreative()) held.shrink(1);
+                if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.3f);
+                player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Text Component at (%d, %d)", sx, sy, gx, gy)), true);
+                return ItemInteractionResult.SUCCESS;
+            }
         }
 
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
@@ -284,7 +303,7 @@ public class TileControlPanel extends TileEntityComputronics {
         }
 
         // Handle resizing if valid
-        if (sizeX >= 1 && sizeX <= 4 && sizeY >= 1 && sizeY <= 4) {
+        if (sizeX >= 1 && sizeX <= 8 && sizeY >= 1 && sizeY <= 8) {
             resizeElement(elem, sizeX, sizeY);
         }
         markChangedAndSync();
@@ -313,6 +332,7 @@ public class TileControlPanel extends TileEntityComputronics {
             case LAMP -> new ItemStack(ModItems.MINI_LAMP.get());
             case SWITCH -> new ItemStack(ModItems.TOGGLE_SWITCH.get());
             case SEVEN_SEGMENT -> new ItemStack(ModItems.SEVEN_SEGMENT.get());
+            case TEXT -> new ItemStack(ModItems.PANEL_TEXT.get());
             default -> ItemStack.EMPTY;
         };
         if (!drop.isEmpty() && player != null) {
@@ -530,6 +550,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 map.put("label", elements[i].label);
                 map.put("pressed", elements[i].pressTicks > 0);
                 map.put("displayValue", elements[i].displayValue);
+                map.put("textScale", elements[i].textScale);
                 result.add(map);
             }
         }
@@ -575,6 +596,47 @@ public class TileControlPanel extends TileEntityComputronics {
         return new Object[]{true};
     }
 
+    @Callback(doc = "function(slot:number, text:string):boolean -- Sets the text of a text component or button.")
+    public Object[] setText(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return new Object[]{false, "invalid slot"};
+        PanelElement elem = elements[slot];
+        if (elem.type != ElementType.TEXT && elem.type != ElementType.BUTTON) {
+            return new Object[]{false, "element does not support text"};
+        }
+        elem.label = args.checkString(1);
+        markChangedAndSync();
+        return new Object[]{true};
+    }
+
+    @Callback(doc = "function(slot:number):string -- Gets the text of a text component or button.")
+    public Object[] getText(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return new Object[]{null, "invalid slot"};
+        PanelElement elem = elements[slot];
+        return new Object[]{elem.label != null ? elem.label : ""};
+    }
+
+    @Callback(doc = "function(slot:number, color:number):boolean -- Sets the text color (RGB hex).")
+    public Object[] setTextColor(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return new Object[]{false, "invalid slot"};
+        PanelElement elem = elements[slot];
+        elem.textColor = args.checkInteger(1) & 0xFFFFFF;
+        markChangedAndSync();
+        return new Object[]{true};
+    }
+
+    @Callback(doc = "function(slot:number, scale:number):boolean -- Sets the text scale factor (0.2 to 4.0).")
+    public Object[] setTextScale(Context context, Arguments args) {
+        int slot = args.checkInteger(0) - 1;
+        if (slot < 0 || slot >= TOTAL_SLOTS) return new Object[]{false, "invalid slot"};
+        PanelElement elem = elements[slot];
+        elem.textScale = (float) Math.max(0.2, Math.min(4.0, args.checkDouble(1)));
+        markChangedAndSync();
+        return new Object[]{true};
+    }
+
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
@@ -614,6 +676,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 itemTag.putInt("textColor", elements[i].textColor);
                 itemTag.putBoolean("bold", elements[i].bold);
                 itemTag.putString("displayValue", elements[i].displayValue != null ? elements[i].displayValue : "0");
+                itemTag.putFloat("textScale", elements[i].textScale);
                 list.add(itemTag);
             }
         }
@@ -656,6 +719,7 @@ public class TileControlPanel extends TileEntityComputronics {
                     elements[slot].textColor = itemTag.contains("textColor") ? itemTag.getInt("textColor") : 0xFFFFFF;
                     elements[slot].bold = !itemTag.contains("bold") || itemTag.getBoolean("bold");
                     elements[slot].displayValue = itemTag.contains("displayValue") ? itemTag.getString("displayValue") : "0";
+                    elements[slot].textScale = itemTag.contains("textScale") ? itemTag.getFloat("textScale") : 1.0f;
                 }
             }
         }
