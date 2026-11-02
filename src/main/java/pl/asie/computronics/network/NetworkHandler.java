@@ -12,6 +12,7 @@ public class NetworkHandler {
         registrar.playToServer(ConfigurePanelPayload.TYPE, ConfigurePanelPayload.STREAM_CODEC, ConfigurePanelPayload::handle);
         registrar.playToServer(RemovePanelElementPayload.TYPE, RemovePanelElementPayload.STREAM_CODEC, RemovePanelElementPayload::handle);
         registrar.playToClient(SpeechBoxPayload.TYPE, SpeechBoxPayload.STREAM_CODEC, SpeechBoxPayload::handle);
+        registrar.playToClient(SyncPanelElementsPayload.TYPE, SyncPanelElementsPayload.STREAM_CODEC, SyncPanelElementsPayload::handle);
         Computronics.LOGGER.info("Computronics: Network payloads registered successfully.");
     }
 }

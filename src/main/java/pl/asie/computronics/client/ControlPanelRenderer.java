@@ -196,7 +196,7 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                         elem.label, elem.textColor, elem.bold, 0.85f);
             } else if (elem.type == TileControlPanel.ElementType.TEXT) {
                 renderInWorldText(poseStack, buffer, font, face, facing,
-                        cu1, cv1, cu2, cv2, 0.005f,
+                        cu1, cv1, cu2, cv2, 0.008f,
                         elem.label, elem.textColor, elem.bold, elem.textScale);
             }
         }
@@ -398,7 +398,9 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
                                           AttachFace face, Direction facing,
                                           float cu1, float cv1, float cu2, float cv2, float h,
                                           String rawText, int textColor, boolean bold, float textScale) {
-        if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderControlPanelWorldText.get()) return;
+        try {
+            if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderControlPanelWorldText.get()) return;
+        } catch (Throwable ignored) {}
         if (rawText == null || rawText.trim().isEmpty()) return;
 
         // Multi-line support: split by \n or \r\n (up to 4 lines)
@@ -464,8 +466,8 @@ public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPane
             switch (facing) {
                 case SOUTH -> {} // Normal +Z (facing south into room)
                 case NORTH -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
-                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
-                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(270.0f));
+                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(270.0f));
+                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
                 default    -> {}
             }
         }

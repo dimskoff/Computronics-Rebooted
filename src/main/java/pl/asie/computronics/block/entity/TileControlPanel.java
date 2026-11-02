@@ -113,6 +113,15 @@ public class TileControlPanel extends TileEntityComputronics {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                CompoundTag tag = new CompoundTag();
+                saveAdditional(tag, level.registryAccess());
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+                        serverLevel,
+                        new net.minecraft.world.level.ChunkPos(worldPosition),
+                        new pl.asie.computronics.network.SyncPanelElementsPayload(worldPosition, tag)
+                );
+            }
         }
     }
 
@@ -213,7 +222,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.5f);
                 player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Indicator Lamp at (%d, %d)", size, size, gx, gy)), true);
-                return ItemInteractionResult.SUCCESS;
+                return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
             }
         } else if (held.getItem() instanceof ItemMiniButton) {
             int size = ItemMiniButton.getPlacementSize(held);
@@ -221,7 +230,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.2f);
                 player.displayClientMessage(Component.literal(String.format("§e[Control Panel] §fMounted %dx%d Tactile Button at (%d, %d)", size, size, gx, gy)), true);
-                return ItemInteractionResult.SUCCESS;
+                return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
             }
         } else if (held.getItem() instanceof ItemToggleSwitch) {
             int size = ItemToggleSwitch.getPlacementSize(held);
@@ -229,7 +238,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.2f);
                 player.displayClientMessage(Component.literal(String.format("§6[Control Panel] §fMounted %dx%d Toggle Switch at (%d, %d)", size, size, gx, gy)), true);
-                return ItemInteractionResult.SUCCESS;
+                return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
             }
         } else if (held.getItem() instanceof ItemSevenSegment) {
             int digits = ItemSevenSegment.getPlacementSize(held); // 1, 2, 3, or 4
@@ -238,7 +247,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.4f);
                 player.displayClientMessage(Component.literal(String.format("§b[Control Panel] §fMounted %d-Digit 7-Segment Display (1x%d) at (%d, %d)", digits, digits, placeX, gy)), true);
-                return ItemInteractionResult.SUCCESS;
+                return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
             }
         } else if (held.getItem() instanceof ItemPanelText) {
             int[] dims = ItemPanelText.getPlacementDimensions(held);
@@ -258,7 +267,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 if (!player.isCreative()) held.shrink(1);
                 if (level != null) level.playSound(null, worldPosition, SoundEvents.STONE_PLACE, SoundSource.BLOCKS, 1.0f, 1.3f);
                 player.displayClientMessage(Component.literal(String.format("§a[Control Panel] §fMounted %dx%d Text Component at (%d, %d)", sx, sy, placeX, placeY)), true);
-                return ItemInteractionResult.SUCCESS;
+                return ItemInteractionResult.sidedSuccess(level != null && level.isClientSide());
             }
         }
 
@@ -671,6 +680,12 @@ public class TileControlPanel extends TileEntityComputronics {
     }
 
     @Override
+    public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
+        super.handleUpdateTag(tag, registries);
+        loadAdditional(tag, registries);
+    }
+
+    @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
         super.onDataPacket(net, pkt, registries);
         CompoundTag tag = pkt.getTag();
@@ -732,10 +747,10 @@ public class TileControlPanel extends TileEntityComputronics {
                     }
                     elements[slot].color = itemTag.getInt("color");
                     elements[slot].active = itemTag.getBoolean("active");
-                    int s = itemTag.contains("size") ? Math.max(1, Math.min(4, itemTag.getInt("size"))) : 1;
+                    int s = itemTag.contains("size") ? Math.max(1, Math.min(8, itemTag.getInt("size"))) : 1;
                     elements[slot].size = s;
-                    elements[slot].sizeX = itemTag.contains("sizeX") ? Math.max(1, Math.min(4, itemTag.getInt("sizeX"))) : s;
-                    elements[slot].sizeY = itemTag.contains("sizeY") ? Math.max(1, Math.min(4, itemTag.getInt("sizeY"))) : (elements[slot].type == ElementType.SEVEN_SEGMENT ? 1 : s);
+                    elements[slot].sizeX = itemTag.contains("sizeX") ? Math.max(1, Math.min(8, itemTag.getInt("sizeX"))) : s;
+                    elements[slot].sizeY = itemTag.contains("sizeY") ? Math.max(1, Math.min(8, itemTag.getInt("sizeY"))) : (elements[slot].type == ElementType.SEVEN_SEGMENT ? 1 : s);
                     elements[slot].label = itemTag.contains("label") ? itemTag.getString("label") : "";
                     elements[slot].textColor = itemTag.contains("textColor") ? itemTag.getInt("textColor") : 0xFFFFFF;
                     elements[slot].bold = !itemTag.contains("bold") || itemTag.getBoolean("bold");
