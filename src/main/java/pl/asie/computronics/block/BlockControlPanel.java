@@ -2,33 +2,50 @@ package pl.asie.computronics.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraft.world.level.BlockGetter;
 import pl.asie.computronics.block.entity.TileControlPanel;
+import pl.asie.computronics.item.ItemPanelComponent;
+import pl.asie.computronics.item.ItemScrewdriver;
+import pl.asie.computronics.panel.PanelComponent;
+import pl.asie.computronics.panel.PanelComponentType;
+import pl.asie.computronics.panel.PanelOrientation;
+import pl.asie.computronics.util.SidedHooks;
 
+/**
+ * A thin plate (4 px) mounted flush on a floor, ceiling or wall. Components are placed with
+ * right-click, used with right-click, configured with the screwdriver (right-click: settings,
+ * sneak + right-click: resize) and removed with screwdriver left-click.
+ */
 public class BlockControlPanel extends BlockComputronics {
-    // 8-voxel thick slab shapes (offset away from the mounting surface)
-    private static final VoxelShape SHAPE_FLOOR   = Block.box(0, 8, 0, 16, 16, 16); // Top half (countertop height)
-    private static final VoxelShape SHAPE_CEILING = Block.box(0, 0, 0, 16, 8, 16);  // Bottom half
-    private static final VoxelShape SHAPE_WALL_N  = Block.box(0, 0, 0, 16, 16, 8);  // North side of block (away from south wall)
-    private static final VoxelShape SHAPE_WALL_S  = Block.box(0, 0, 8, 16, 16, 16); // South side of block (away from north wall)
-    private static final VoxelShape SHAPE_WALL_W  = Block.box(0, 0, 0, 8, 16, 16);  // West side of block (away from east wall)
-    private static final VoxelShape SHAPE_WALL_E  = Block.box(8, 0, 0, 16, 16, 16); // East side of block (away from west wall)
+    private static final int T = 4;
+    private static final VoxelShape FLOOR = Block.box(0, 0, 0, 16, T, 16);
+    private static final VoxelShape CEILING = Block.box(0, 16 - T, 0, 16, 16, 16);
+    private static final VoxelShape WALL_NORTH = Block.box(0, 0, 16 - T, 16, 16, 16);
+    private static final VoxelShape WALL_SOUTH = Block.box(0, 0, 0, 16, 16, T);
+    private static final VoxelShape WALL_WEST = Block.box(16 - T, 0, 0, 16, 16, 16);
+    private static final VoxelShape WALL_EAST = Block.box(0, 0, 0, T, 16, 16);
 
     public BlockControlPanel(Properties properties) {
         super(properties);
@@ -38,137 +55,49 @@ public class BlockControlPanel extends BlockComputronics {
     }
 
     @Override
-    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
-        if (face == AttachFace.FLOOR) return SHAPE_FLOOR;
-        if (face == AttachFace.CEILING) return SHAPE_CEILING;
-        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-        return switch (facing) {
-            case NORTH -> SHAPE_WALL_N;
-            case SOUTH -> SHAPE_WALL_S;
-            case WEST -> SHAPE_WALL_W;
-            case EAST -> SHAPE_WALL_E;
-            default -> SHAPE_FLOOR;
-        };
-    }
-
-    @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(BlockStateProperties.ATTACH_FACE, BlockStateProperties.HORIZONTAL_FACING);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        Direction clicked = context.getClickedFace();
-        AttachFace face;
-        Direction facing;
-
-        if (clicked == Direction.UP) {
-            face = AttachFace.FLOOR;
-            facing = context.getHorizontalDirection().getOpposite();
-        } else if (clicked == Direction.DOWN) {
-            face = AttachFace.CEILING;
-            facing = context.getHorizontalDirection().getOpposite();
-        } else {
-            face = AttachFace.WALL;
-            facing = clicked;
-        }
-
-        return defaultBlockState()
-                .setValue(BlockStateProperties.ATTACH_FACE, face)
-                .setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
-    }
-
-    public static Direction getFrontFace(BlockState state) {
-        AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
-        if (face == AttachFace.FLOOR) return Direction.UP;
-        if (face == AttachFace.CEILING) return Direction.DOWN;
-        return state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-    }
-
-    public static int[] calculateGrid(BlockState state, BlockPos pos, BlockHitResult hit) {
-        return calculateGrid(state, pos, hit.getLocation());
-    }
-
-    public static int[] calculateGrid(BlockState state, BlockPos pos, net.minecraft.world.phys.Vec3 clickLoc) {
-        AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
-        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-
-        double x = clickLoc.x - pos.getX();
-        double y = clickLoc.y - pos.getY();
-        double z = clickLoc.z - pos.getZ();
-
-        double u = 0.5;
-        double v = 0.5;
-
-        if (face == AttachFace.FLOOR) {
-            switch (facing) {
-                case NORTH -> { u = x; v = z; }
-                case SOUTH -> { u = 1.0 - x; v = 1.0 - z; }
-                case WEST  -> { u = 1.0 - z; v = x; }
-                case EAST  -> { u = z; v = 1.0 - x; }
-                default    -> { u = x; v = z; }
-            }
-        } else if (face == AttachFace.CEILING) {
-            switch (facing) {
-                case NORTH -> { u = x; v = 1.0 - z; }
-                case SOUTH -> { u = 1.0 - x; v = z; }
-                case WEST  -> { u = z; v = x; }
-                case EAST  -> { u = 1.0 - z; v = 1.0 - x; }
-                default    -> { u = x; v = 1.0 - z; }
-            }
-        } else { // WALL
-            v = 1.0 - y;
-            switch (facing) {
-                case SOUTH -> u = x;
-                case NORTH -> u = 1.0 - x;
-                case WEST  -> u = z;
-                case EAST  -> u = 1.0 - z;
-                default    -> u = x;
-            }
-        }
-
-        u = Math.max(0.001, Math.min(0.999, u));
-        v = Math.max(0.001, Math.min(0.999, v));
-        int gx = (int) (u * 8.0);
-        int gy = (int) (v * 8.0);
-        return new int[]{ Math.max(0, Math.min(7, gx)), Math.max(0, Math.min(7, gy)) };
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return switch (state.getValue(BlockStateProperties.ATTACH_FACE)) {
+            case FLOOR -> FLOOR;
+            case CEILING -> CEILING;
+            case WALL -> switch (state.getValue(BlockStateProperties.HORIZONTAL_FACING)) {
+                case NORTH -> WALL_NORTH;
+                case SOUTH -> WALL_SOUTH;
+                case WEST -> WALL_WEST;
+                default -> WALL_EAST;
+            };
+        };
     }
 
     @Override
-    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
-        if (player.getMainHandItem().getItem() instanceof pl.asie.computronics.item.ItemScrewdriver) {
-            if (!level.isClientSide()) {
-                dismantleAt(level, pos, state, player);
-            }
-            return;
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        Direction clicked = context.getClickedFace();
+        BlockState state = defaultBlockState();
+        if (clicked == Direction.UP) {
+            state = state.setValue(BlockStateProperties.ATTACH_FACE, AttachFace.FLOOR)
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+        } else if (clicked == Direction.DOWN) {
+            state = state.setValue(BlockStateProperties.ATTACH_FACE, AttachFace.CEILING)
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, context.getHorizontalDirection().getOpposite());
+        } else {
+            state = state.setValue(BlockStateProperties.ATTACH_FACE, AttachFace.WALL)
+                    .setValue(BlockStateProperties.HORIZONTAL_FACING, clicked);
         }
-        super.attack(state, level, pos, player);
+        return state;
     }
 
-    public static boolean dismantleAt(Level level, BlockPos pos, BlockState state, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileControlPanel panel) {
-            net.minecraft.world.phys.HitResult hit = player.pick(5.0, 0.0f, false);
-            int[] grid = null;
-            if (hit instanceof BlockHitResult bhr && bhr.getBlockPos().equals(pos)) {
-                grid = calculateGrid(state, pos, bhr.getLocation());
-            } else if (hit != null) {
-                grid = calculateGrid(state, pos, hit.getLocation());
-            }
-            if (grid != null) {
-                TileControlPanel.PanelElement elem = panel.findRootElement(grid[0], grid[1]);
-                if (elem != null && elem.type != TileControlPanel.ElementType.NONE) {
-                    String typeName = elem.type.name();
-                    int slot1 = elem.slot + 1;
-                    panel.removeElementAndDrop(elem.slot, player);
-                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.ITEM_FRAME_REMOVE_ITEM, net.minecraft.sounds.SoundSource.BLOCKS, 1.0f, 1.1f);
-                    player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[Control Panel] §fДемонтирован компонент: §e" + typeName + " §7(Слот #" + slot1 + ")"), true);
-                    return true;
-                }
-            }
-        }
-        return false;
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(BlockStateProperties.HORIZONTAL_FACING, rotation.rotate(state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
     }
 
     @Override
@@ -176,21 +105,110 @@ public class BlockControlPanel extends BlockComputronics {
         return new TileControlPanel(pos, state);
     }
 
+    // ------------------------------------------------------------------ hit testing
+
+    /** Grid cell under the hit, or null if the hit isn't on the front face's usable area. */
+    public static int[] cellAt(BlockState state, BlockPos pos, Vec3 hitLocation, Direction hitFace) {
+        PanelOrientation o = PanelOrientation.of(state);
+        if (hitFace != null && hitFace != Direction.getNearest(o.w.x, o.w.y, o.w.z)) return null;
+        return o.toCell(hitLocation.subtract(pos.getX(), pos.getY(), pos.getZ()));
+    }
+
+    public static PanelComponent componentAt(TileControlPanel panel, BlockHitResult hit) {
+        int[] cell = cellAt(panel.getBlockState(), panel.getBlockPos(), hit.getLocation(), hit.getDirection());
+        return cell == null ? null : panel.layout().at(cell[0], cell[1]);
+    }
+
+    // ------------------------------------------------------------------ interaction
+
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileControlPanel panel) {
-            return panel.onInteractWithItem(player, hand, hitResult);
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!(level.getBlockEntity(pos) instanceof TileControlPanel panel)) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
+        int[] cell = cellAt(state, pos, hit.getLocation(), hit.getDirection());
+
+        if (stack.getItem() instanceof ItemPanelComponent item) {
+            if (cell == null) return ItemInteractionResult.FAIL;
+            if (!level.isClientSide) {
+                PanelComponent c = panel.mount(item.type(), cell[0], cell[1], ItemPanelComponent.getPlacementSize(stack));
+                if (c == null) {
+                    player.displayClientMessage(Component.translatable("message.computronics.panel.no_room"), true);
+                    return ItemInteractionResult.FAIL;
+                }
+                stack.consume(1, player);
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        if (stack.getItem() instanceof ItemScrewdriver) {
+            PanelComponent c = cell == null ? null : panel.layout().at(cell[0], cell[1]);
+            if (c == null) return ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            if (player.isShiftKeyDown()) {
+                if (!level.isClientSide) cycleSize(panel, c, player);
+            } else if (level.isClientSide) {
+                SidedHooks.openPanelConfig(pos, c.id());
+            }
+            return ItemInteractionResult.sidedSuccess(level.isClientSide);
+        }
+
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileControlPanel panel) {
-            return panel.onInteractEmptyHand(player, hitResult);
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (player.isShiftKeyDown() || !(level.getBlockEntity(pos) instanceof TileControlPanel panel)) {
+            return InteractionResult.PASS;
         }
-        return super.useWithoutItem(state, level, pos, player, hitResult);
+        PanelComponent c = componentAt(panel, hit);
+        if (c == null) return InteractionResult.PASS;
+        if (level.isClientSide) {
+            // predict: buttons/switches respond, lamps & displays don't consume the click
+            return c.type == PanelComponentType.BUTTON || c.type == PanelComponentType.SWITCH
+                    ? InteractionResult.SUCCESS : InteractionResult.PASS;
+        }
+        return panel.activate(c, player.getGameProfile().getName()) ? InteractionResult.CONSUME : InteractionResult.PASS;
+    }
+
+    private static void cycleSize(TileControlPanel panel, PanelComponent c, Player player) {
+        // try the next size up, wrapping to 1 when it doesn't fit or exceeds 4
+        int current = c.type.square ? c.width : (c.type == PanelComponentType.SEGMENT ? c.digits() : c.height);
+        for (int step = 1; step <= 4; step++) {
+            int size = (current - 1 + step) % 4 + 1;
+            int[] fp = c.type.footprint(size);
+            if (panel.layout().resize(c, fp[0], fp[1])) {
+                panel.markDirtyAndSync();
+                player.displayClientMessage(Component.translatable("message.computronics.panel.resized", fp[0], fp[1]), true);
+                return;
+            }
+        }
+    }
+
+    /** Screwdriver left-click: take one component off. Called once per click from the server. */
+    public static boolean dismantle(Level level, BlockPos pos, Player player, Vec3 hitLocation, Direction face) {
+        if (!(level.getBlockEntity(pos) instanceof TileControlPanel panel)) return false;
+        int[] cell = cellAt(panel.getBlockState(), pos, hitLocation, face);
+        PanelComponent c = cell == null ? null : panel.layout().at(cell[0], cell[1]);
+        if (c == null) return false;
+        ItemStack drop = panel.dismount(c);
+        if (!player.getAbilities().instabuild && !player.getInventory().add(drop)) {
+            player.drop(drop, false);
+        }
+        return true;
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileControlPanel panel) {
+            for (ItemStack drop : panel.dismountAll()) {
+                Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, drop);
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    @Override
+    protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
+        return true;
     }
 }

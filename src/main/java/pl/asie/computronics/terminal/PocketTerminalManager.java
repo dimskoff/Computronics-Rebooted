@@ -13,7 +13,13 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import pl.asie.computronics.item.ItemPocketTerminal;
 
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+
 import java.lang.ref.WeakReference;
+import java.util.UUID;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,22 +27,79 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PocketTerminalManager {
     private static final Map<String, TerminalEndpoint> ENDPOINTS = new ConcurrentHashMap<>();
 
+    private static boolean registered;
+
+    /** Registers logout / server-stop / stale-endpoint cleanup listeners (idempotent; also called lazily). */
+    public static synchronized void init() {
+        if (registered) return;
+        registered = true;
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> removeAllOf(e.getEntity().getUUID()));
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent e) -> clearAll());
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post e) -> {
+            if (e.getServer().getTickCount() % 20 == 0) sweepStale(e.getServer().getTickCount());
+        });
+    }
+
     public static void updateTerminal(ServerPlayer player, String terminalId, ItemStack stack) {
         if (terminalId == null || terminalId.isEmpty()) return;
+        init();
+        int now = player.getServer() != null ? player.getServer().getTickCount() : 0;
 
         TerminalEndpoint endpoint = ENDPOINTS.get(terminalId);
         if (endpoint == null) {
             endpoint = new TerminalEndpoint(player, terminalId, stack);
+            endpoint.lastSeenTick = now;
+            endpoint.lastNetworkUpdateTick = now;
             ENDPOINTS.put(terminalId, endpoint);
             try {
                 Network.joinWirelessNetwork(endpoint);
             } catch (Throwable ignored) {}
         } else {
+            boolean changedPlayer = endpoint.playerRef.get() != player;
             endpoint.updateState(player, stack);
-            try {
-                Network.updateWirelessNetwork(endpoint);
-            } catch (Throwable ignored) {}
+            endpoint.lastSeenTick = now;
+            // Only re-index in the wireless network when moved more than a block or every 20 ticks.
+            boolean moved = endpoint.lastNetworkPos.distToCenterSqr(player.position()) > 1.0 || changedPlayer;
+            if (moved || now - endpoint.lastNetworkUpdateTick >= 20) {
+                endpoint.lastNetworkPos = player.blockPosition();
+                endpoint.lastNetworkUpdateTick = now;
+                try {
+                    Network.updateWirelessNetwork(endpoint);
+                } catch (Throwable ignored) {}
+            }
         }
+    }
+
+    public static void removeAllOf(UUID playerId) {
+        ENDPOINTS.values().removeIf(ep -> {
+            if (playerId.equals(ep.playerId)) {
+                leave(ep);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    public static void clearAll() {
+        ENDPOINTS.values().forEach(PocketTerminalManager::leave);
+        ENDPOINTS.clear();
+    }
+
+    private static void sweepStale(int now) {
+        ENDPOINTS.values().removeIf(ep -> {
+            ServerPlayer p = ep.playerRef.get();
+            if (p == null || p.isRemoved() || now - ep.lastSeenTick > 40) {
+                leave(ep);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private static void leave(TerminalEndpoint ep) {
+        try {
+            Network.leaveWirelessNetwork(ep);
+        } catch (Throwable ignored) {}
     }
 
     public static void removeTerminal(String terminalId) {
@@ -51,6 +114,10 @@ public class PocketTerminalManager {
 
     public static class TerminalEndpoint implements WirelessEndpoint {
         private WeakReference<ServerPlayer> playerRef;
+        private final UUID playerId;
+        private int lastSeenTick;
+        private int lastNetworkUpdateTick;
+        private BlockPos lastNetworkPos;
         private final String terminalId;
         private WeakReference<ItemStack> stackRef;
         private BlockPos lastPos;
@@ -60,6 +127,8 @@ public class PocketTerminalManager {
             this.terminalId = terminalId;
             this.stackRef = new WeakReference<>(stack);
             this.lastPos = player.blockPosition();
+            this.playerId = player.getUUID();
+            this.lastNetworkPos = lastPos;
         }
 
         public void updateState(ServerPlayer player, ItemStack stack) {
@@ -185,7 +254,7 @@ public class PocketTerminalManager {
                 }
                 case "port" -> {
                     if (data.length >= argOffset + 2) {
-                        int newPort = parseNumber(data[argOffset + 1], ItemPocketTerminal.DEFAULT_PORT);
+                        int newPort = parseNumber(data[argOffset + 1], ItemPocketTerminal.defaultPort());
                         ItemPocketTerminal.setListeningPort(stack, newPort);
                     }
                 }

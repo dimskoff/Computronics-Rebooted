@@ -2,23 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "III",
-    "IGI",
+    "IXI",
+    "1P1",
     "IRI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "G": {
-      "item": "minecraft:glass_pane"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "R": { "tag": "c:dusts/redstone" },
+    "X": { "item": "minecraft:spyglass" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:camera"
-  }
+  "result": { "count": 1, "id": "computronics:camera" }
 }

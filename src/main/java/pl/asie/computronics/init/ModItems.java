@@ -3,107 +3,92 @@ package pl.asie.computronics.init;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import pl.asie.computronics.Computronics;
 import pl.asie.computronics.item.*;
 import pl.asie.computronics.item.rack.*;
 
-public class ModItems {
+import java.util.function.Function;
+
+/**
+ * Item registry. Registry names must never change: existing worlds reference them.
+ */
+public final class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Computronics.MODID);
 
+    private ModItems() {}
+
+    /** Registers the {@link BlockItem} for a block, using the block's registry name. */
+    private static DeferredItem<BlockItem> blockItem(DeferredBlock<? extends Block> block) {
+        return ITEMS.registerSimpleBlockItem(block);
+    }
+
+    private static <I extends Item> DeferredItem<I> item(String name, Function<Item.Properties, I> factory) {
+        return ITEMS.registerItem(name, factory, new Item.Properties());
+    }
+
+    private static <I extends Item> DeferredItem<I> item(String name, Function<Item.Properties, I> factory, Rarity rarity) {
+        return ITEMS.registerItem(name, factory, new Item.Properties().rarity(rarity));
+    }
+
+    private static DeferredItem<ItemTape> tape(String name, int capacity, Rarity rarity) {
+        return ITEMS.registerItem(name, props -> new ItemTape(props, capacity), new Item.Properties().rarity(rarity));
+    }
+
     // Block Items
-    public static final DeferredItem<BlockItem> CHAT_BOX = ITEMS.register("chat_box",
-            () -> new BlockItem(ModBlocks.CHAT_BOX.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> RADAR = ITEMS.register("radar",
-            () -> new BlockItem(ModBlocks.RADAR.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> CAMERA = ITEMS.register("camera",
-            () -> new BlockItem(ModBlocks.CAMERA.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> TAPE_DRIVE = ITEMS.register("tape_drive",
-            () -> new BlockItem(ModBlocks.TAPE_DRIVE.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> ACOUSTIC_SENSOR = ITEMS.register("acoustic_sensor",
-            () -> new BlockItem(ModBlocks.ACOUSTIC_SENSOR.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> RF_JAMMER = ITEMS.register("rf_jammer",
-            () -> new BlockItem(ModBlocks.RF_JAMMER.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> WEATHER_STATION = ITEMS.register("weather_station",
-            () -> new BlockItem(ModBlocks.WEATHER_STATION.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> INDUCTIVE_CHARGER = ITEMS.register("inductive_charger",
-            () -> new BlockItem(ModBlocks.INDUCTIVE_CHARGER.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> LASER_TRANSCEIVER = ITEMS.register("laser_transceiver",
-            () -> new BlockItem(ModBlocks.LASER_TRANSCEIVER.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> ANALOG_GAUGE = ITEMS.register("analog_gauge",
-            () -> new BlockItem(ModBlocks.ANALOG_GAUGE.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> IRON_NOTEBLOCK = ITEMS.register("iron_noteblock",
-            () -> new BlockItem(ModBlocks.IRON_NOTEBLOCK.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> CONTROL_PANEL = ITEMS.register("control_panel",
-            () -> new BlockItem(ModBlocks.CONTROL_PANEL.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> SPEECH_BOX = ITEMS.register("speech_box",
-            () -> new BlockItem(ModBlocks.SPEECH_BOX.get(), new Item.Properties()));
-    public static final DeferredItem<BlockItem> ENTITY_DETECTOR = ITEMS.register("entity_detector",
-            () -> new BlockItem(ModBlocks.ENTITY_DETECTOR.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> CHAT_BOX = blockItem(ModBlocks.CHAT_BOX);
+    public static final DeferredItem<BlockItem> RADAR = blockItem(ModBlocks.RADAR);
+    public static final DeferredItem<BlockItem> CAMERA = blockItem(ModBlocks.CAMERA);
+    public static final DeferredItem<BlockItem> TAPE_DRIVE = blockItem(ModBlocks.TAPE_DRIVE);
+    public static final DeferredItem<BlockItem> ACOUSTIC_SENSOR = blockItem(ModBlocks.ACOUSTIC_SENSOR);
+    public static final DeferredItem<BlockItem> RF_JAMMER = blockItem(ModBlocks.RF_JAMMER);
+    public static final DeferredItem<BlockItem> WEATHER_STATION = blockItem(ModBlocks.WEATHER_STATION);
+    public static final DeferredItem<BlockItem> INDUCTIVE_CHARGER = blockItem(ModBlocks.INDUCTIVE_CHARGER);
+    public static final DeferredItem<BlockItem> LASER_TRANSCEIVER = blockItem(ModBlocks.LASER_TRANSCEIVER);
+    public static final DeferredItem<BlockItem> ANALOG_GAUGE = blockItem(ModBlocks.ANALOG_GAUGE);
+    public static final DeferredItem<BlockItem> IRON_NOTEBLOCK = blockItem(ModBlocks.IRON_NOTEBLOCK);
+    public static final DeferredItem<BlockItem> CONTROL_PANEL = blockItem(ModBlocks.CONTROL_PANEL);
+    public static final DeferredItem<BlockItem> SPEECH_BOX = blockItem(ModBlocks.SPEECH_BOX);
+    public static final DeferredItem<BlockItem> ENTITY_DETECTOR = blockItem(ModBlocks.ENTITY_DETECTOR);
 
     // Handheld Terminals
-    public static final DeferredItem<ItemPocketTerminal> POCKET_TERMINAL = ITEMS.register("pocket_terminal",
-            () -> new ItemPocketTerminal(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<ItemPocketTerminal> POCKET_TERMINAL = item("pocket_terminal", ItemPocketTerminal::new, Rarity.RARE);
 
     // Control Panel Modular Elements
-    public static final DeferredItem<ItemMiniLamp> MINI_LAMP = ITEMS.register("mini_lamp",
-            () -> new ItemMiniLamp(new Item.Properties()));
-    public static final DeferredItem<ItemMiniButton> MINI_BUTTON = ITEMS.register("mini_button",
-            () -> new ItemMiniButton(new Item.Properties()));
-    public static final DeferredItem<ItemToggleSwitch> TOGGLE_SWITCH = ITEMS.register("toggle_switch",
-            () -> new ItemToggleSwitch(new Item.Properties()));
-    public static final DeferredItem<pl.asie.computronics.item.ItemSevenSegment> SEVEN_SEGMENT = ITEMS.register("seven_segment",
-            () -> new pl.asie.computronics.item.ItemSevenSegment(new Item.Properties()));
-    public static final DeferredItem<pl.asie.computronics.item.ItemPanelText> PANEL_TEXT = ITEMS.register("panel_text",
-            () -> new pl.asie.computronics.item.ItemPanelText(new Item.Properties()));
-    public static final DeferredItem<pl.asie.computronics.item.ItemScrewdriver> SCREWDRIVER = ITEMS.register("screwdriver",
-            () -> new pl.asie.computronics.item.ItemScrewdriver(new Item.Properties()));
+    public static final DeferredItem<ItemMiniLamp> MINI_LAMP = item("mini_lamp", ItemMiniLamp::new);
+    public static final DeferredItem<ItemMiniButton> MINI_BUTTON = item("mini_button", ItemMiniButton::new);
+    public static final DeferredItem<ItemToggleSwitch> TOGGLE_SWITCH = item("toggle_switch", ItemToggleSwitch::new);
+    public static final DeferredItem<ItemSevenSegment> SEVEN_SEGMENT = item("seven_segment", ItemSevenSegment::new);
+    public static final DeferredItem<ItemPanelText> PANEL_TEXT = item("panel_text", ItemPanelText::new);
+    public static final DeferredItem<ItemScrewdriver> SCREWDRIVER = item("screwdriver", ItemScrewdriver::new);
 
     // Server Rack Mountable Boards
-    public static final DeferredItem<ItemRackLightBoard> RACK_BOARD_LIGHT = ITEMS.register("rack_board_light",
-            () -> new ItemRackLightBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemRackSwitchBoard> RACK_BOARD_SWITCH = ITEMS.register("rack_board_switch",
-            () -> new ItemRackSwitchBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemRackBoomBoard> RACK_BOARD_BOOM = ITEMS.register("rack_board_boom",
-            () -> new ItemRackBoomBoard(new Item.Properties().rarity(Rarity.RARE)));
-    public static final DeferredItem<ItemRackCapacitorBoard> RACK_BOARD_CAPACITOR = ITEMS.register("rack_board_capacitor",
-            () -> new ItemRackCapacitorBoard(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<pl.asie.computronics.item.rack.ItemRackCoProcessor> RACK_BOARD_CO_PROCESSOR = ITEMS.register("rack_board_co_processor",
-            () -> new pl.asie.computronics.item.rack.ItemRackCoProcessor(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<ItemRackLightBoard> RACK_BOARD_LIGHT = item("rack_board_light", ItemRackLightBoard::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemRackSwitchBoard> RACK_BOARD_SWITCH = item("rack_board_switch", ItemRackSwitchBoard::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemRackBoomBoard> RACK_BOARD_BOOM = item("rack_board_boom", ItemRackBoomBoard::new, Rarity.RARE);
+    public static final DeferredItem<ItemRackCapacitorBoard> RACK_BOARD_CAPACITOR = item("rack_board_capacitor", ItemRackCapacitorBoard::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemRackCoProcessor> RACK_BOARD_CO_PROCESSOR = item("rack_board_co_processor", ItemRackCoProcessor::new, Rarity.RARE);
 
     // Hardware Cards & Upgrades
-    public static final DeferredItem<ItemNetworkCardTier3> NETWORK_CARD_3 = ITEMS.register("network_card_3",
-            () -> new ItemNetworkCardTier3(new Item.Properties().rarity(Rarity.RARE)));
-    public static final DeferredItem<ItemPacketSniffer> PACKET_SNIFFER = ITEMS.register("packet_sniffer",
-            () -> new ItemPacketSniffer(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemCardBoom> CARD_BOOM = ITEMS.register("card_boom",
-            () -> new ItemCardBoom(new Item.Properties().rarity(Rarity.RARE)));
-    public static final DeferredItem<ItemRFJammerCard> RF_JAMMER_CARD = ITEMS.register("rf_jammer_card",
-            () -> new ItemRFJammerCard(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemCardBeep> CARD_BEEP = ITEMS.register("card_beep",
-            () -> new ItemCardBeep(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemCardFX> CARD_FX = ITEMS.register("card_fx",
-            () -> new ItemCardFX(new Item.Properties().rarity(Rarity.RARE)));
+    public static final DeferredItem<ItemNetworkCardTier3> NETWORK_CARD_3 = item("network_card_3", ItemNetworkCardTier3::new, Rarity.RARE);
+    public static final DeferredItem<ItemPacketSniffer> PACKET_SNIFFER = item("packet_sniffer", ItemPacketSniffer::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemCardBoom> CARD_BOOM = item("card_boom", ItemCardBoom::new, Rarity.RARE);
+    public static final DeferredItem<ItemRFJammerCard> RF_JAMMER_CARD = item("rf_jammer_card", ItemRFJammerCard::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemCardBeep> CARD_BEEP = item("card_beep", ItemCardBeep::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemCardFX> CARD_FX = item("card_fx", ItemCardFX::new, Rarity.RARE);
 
-    public static final DeferredItem<ItemChatUpgrade> CHAT_UPGRADE = ITEMS.register("chat_upgrade",
-            () -> new ItemChatUpgrade(new Item.Properties()));
-    public static final DeferredItem<ItemRadarUpgrade> RADAR_UPGRADE = ITEMS.register("radar_upgrade",
-            () -> new ItemRadarUpgrade(new Item.Properties().rarity(Rarity.UNCOMMON)));
-    public static final DeferredItem<ItemCameraUpgrade> CAMERA_UPGRADE = ITEMS.register("camera_upgrade",
-            () -> new ItemCameraUpgrade(new Item.Properties()));
-    public static final DeferredItem<ItemWinchUpgrade> WINCH_UPGRADE = ITEMS.register("winch_upgrade",
-            () -> new ItemWinchUpgrade(new Item.Properties()));
-    public static final DeferredItem<ItemSpeechUpgrade> SPEECH_UPGRADE = ITEMS.register("speech_upgrade",
-            () -> new ItemSpeechUpgrade(new Item.Properties().rarity(Rarity.UNCOMMON)));
+    public static final DeferredItem<ItemChatUpgrade> CHAT_UPGRADE = item("chat_upgrade", ItemChatUpgrade::new);
+    public static final DeferredItem<ItemRadarUpgrade> RADAR_UPGRADE = item("radar_upgrade", ItemRadarUpgrade::new, Rarity.UNCOMMON);
+    public static final DeferredItem<ItemCameraUpgrade> CAMERA_UPGRADE = item("camera_upgrade", ItemCameraUpgrade::new);
+    public static final DeferredItem<ItemWinchUpgrade> WINCH_UPGRADE = item("winch_upgrade", ItemWinchUpgrade::new);
+    public static final DeferredItem<ItemSpeechUpgrade> SPEECH_UPGRADE = item("speech_upgrade", ItemSpeechUpgrade::new, Rarity.UNCOMMON);
 
     // Cassette Tapes
-    public static final DeferredItem<ItemTape> TAPE_IRON = ITEMS.register("tape_iron",
-            () -> new ItemTape(new Item.Properties(), ItemTape.CAPACITY_IRON));
-    public static final DeferredItem<ItemTape> TAPE_GOLD = ITEMS.register("tape_gold",
-            () -> new ItemTape(new Item.Properties(), ItemTape.CAPACITY_GOLD));
-    public static final DeferredItem<ItemTape> TAPE_DIAMOND = ITEMS.register("tape_diamond",
-            () -> new ItemTape(new Item.Properties(), ItemTape.CAPACITY_DIAMOND));
-    public static final DeferredItem<ItemTape> TAPE_NETHER_STAR = ITEMS.register("tape_nether_star",
-            () -> new ItemTape(new Item.Properties().rarity(Rarity.EPIC), ItemTape.CAPACITY_NETHER_STAR));
+    public static final DeferredItem<ItemTape> TAPE_IRON = tape("tape_iron", ItemTape.CAPACITY_IRON, Rarity.COMMON);
+    public static final DeferredItem<ItemTape> TAPE_GOLD = tape("tape_gold", ItemTape.CAPACITY_GOLD, Rarity.COMMON);
+    public static final DeferredItem<ItemTape> TAPE_DIAMOND = tape("tape_diamond", ItemTape.CAPACITY_DIAMOND, Rarity.COMMON);
+    public static final DeferredItem<ItemTape> TAPE_NETHER_STAR = tape("tape_nether_star", ItemTape.CAPACITY_NETHER_STAR, Rarity.EPIC);
 }

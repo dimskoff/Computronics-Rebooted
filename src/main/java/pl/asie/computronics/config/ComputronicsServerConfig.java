@@ -95,11 +95,6 @@ public class ComputronicsServerConfig {
     // Tape Drive & Audio Media
     // =========================================================================
     public final ModConfigSpec.IntValue tapeDriveAudioRadius;
-    public final ModConfigSpec.IntValue tapeDriveBufferMs;
-    public final ModConfigSpec.IntValue tapeIronMinutes;
-    public final ModConfigSpec.IntValue tapeGoldMinutes;
-    public final ModConfigSpec.IntValue tapeDiamondMinutes;
-    public final ModConfigSpec.IntValue tapeNetherStarMinutes;
 
     // =========================================================================
     // Networking & RF Jammer
@@ -255,16 +250,6 @@ public class ComputronicsServerConfig {
         b.comment("Audio tape drive and tape media parameters.");
         tapeDriveAudioRadius = b.comment("Maximum listening radius for tape audio playback in blocks.")
                 .defineInRange("tapeDriveAudioRadius", 24, 4, 128);
-        tapeDriveBufferMs = b.comment("Audio streaming buffer size in milliseconds.")
-                .defineInRange("tapeDriveBufferMs", 750, 100, 5000);
-        tapeIronMinutes = b.comment("Storage capacity of Iron Cassette Tape in minutes.")
-                .defineInRange("tapeIronMinutes", 4, 1, 60);
-        tapeGoldMinutes = b.comment("Storage capacity of Gold Cassette Tape in minutes.")
-                .defineInRange("tapeGoldMinutes", 8, 1, 120);
-        tapeDiamondMinutes = b.comment("Storage capacity of Diamond Cassette Tape in minutes.")
-                .defineInRange("tapeDiamondMinutes", 16, 1, 240);
-        tapeNetherStarMinutes = b.comment("Storage capacity of Nether Star Cassette Tape in minutes.")
-                .defineInRange("tapeNetherStarMinutes", 32, 1, 480);
         b.pop();
 
         // ---------------------------------------------------------------------

@@ -29,8 +29,24 @@ public class TileAcousticSensor extends TileEntityComputronics implements GameEv
     private final VibrationSystem.User vibrationUser = new AcousticVibrationUser();
     private final VibrationSystem.Listener vibrationListener = new VibrationSystem.Listener(this);
 
-    private int sensitivity = 16;
-    private Map<String, Object> lastVibration = null;
+    private volatile int sensitivity = 16;
+    private volatile Map<String, Object> lastVibration = null;
+
+    private static int maxRadius() {
+        try {
+            return pl.asie.computronics.config.ComputronicsServerConfig.SERVER.acousticSensorMaxRadius.get();
+        } catch (Exception e) {
+            return 32;
+        }
+    }
+
+    private static boolean playersOnly() {
+        try {
+            return pl.asie.computronics.config.ComputronicsServerConfig.SERVER.acousticSensorDetectPlayersOnly.get();
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     public TileAcousticSensor(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ACOUSTIC_SENSOR.get(), pos, state);
@@ -67,11 +83,26 @@ public class TileAcousticSensor extends TileEntityComputronics implements GameEv
         return result(sensitivity);
     }
 
-    @Callback(doc = "function(range:number):number -- Sets sensor sensitivity/range (1-32).")
+    @Callback(doc = "function(range:number):number -- Sets sensor sensitivity/range (1 to the configured maximum).")
     public Object[] setSensitivity(Context context, Arguments args) {
         int val = args.checkInteger(0);
-        this.sensitivity = Math.max(1, Math.min(val, 32));
+        this.sensitivity = Math.max(1, Math.min(val, maxRadius()));
+        setChanged();
         return result(this.sensitivity);
+    }
+
+    @Override
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putInt("sensitivity", sensitivity);
+    }
+
+    @Override
+    public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        if (tag.contains("sensitivity")) {
+            this.sensitivity = Math.max(1, tag.getInt("sensitivity"));
+        }
     }
 
     @Callback(direct = true, doc = "function():table -- Returns information about the last detected vibration.")
@@ -84,7 +115,7 @@ public class TileAcousticSensor extends TileEntityComputronics implements GameEv
 
         @Override
         public int getListenerRadius() {
-            return sensitivity;
+            return Math.max(1, Math.min(sensitivity, maxRadius()));
         }
 
         @Override
@@ -95,6 +126,9 @@ public class TileAcousticSensor extends TileEntityComputronics implements GameEv
         @Override
         public boolean canReceiveVibration(ServerLevel level, BlockPos pos, Holder<GameEvent> gameEvent, GameEvent.Context context) {
             if (context.sourceEntity() != null && context.sourceEntity().isSteppingCarefully()) {
+                return false;
+            }
+            if (playersOnly() && !(context.sourceEntity() instanceof net.minecraft.world.entity.player.Player)) {
                 return false;
             }
             return true;

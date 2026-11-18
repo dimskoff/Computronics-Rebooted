@@ -2,23 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "ILI",
-    "LRL",
-    "ILI"
+    "IXI",
+    "2P2",
+    "IWI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "L": {
-      "item": "minecraft:lightning_rod"
-    },
-    "R": {
-      "item": "minecraft:repeater"
-    }
+    "2": { "item": "opencomputers:chip2" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "W": { "item": "opencomputers:wlancard1" },
+    "X": { "item": "minecraft:lightning_rod" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:rf_jammer"
-  }
+  "result": { "count": 1, "id": "computronics:rf_jammer" }
 }

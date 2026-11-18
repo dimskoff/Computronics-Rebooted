@@ -1,21 +1,11 @@
 package pl.asie.computronics.item;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
 
-import java.util.List;
-
-public class ItemRFJammerCard extends Item {
+public class ItemRFJammerCard extends ItemComputronics {
     public ItemRFJammerCard(Properties properties) {
-        super(properties);
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-        tooltipComponents.add(Component.translatable("tooltip.computronics.rf_jammer_card.desc1").withStyle(ChatFormatting.GRAY));
-        tooltipComponents.add(Component.translatable("tooltip.computronics.rf_jammer_card.desc2").withStyle(ChatFormatting.DARK_GRAY));
+        super(properties,
+                line("tooltip.computronics.rf_jammer_card.desc1", ChatFormatting.GRAY),
+                line("tooltip.computronics.rf_jammer_card.desc2", ChatFormatting.DARK_GRAY));
     }
 }

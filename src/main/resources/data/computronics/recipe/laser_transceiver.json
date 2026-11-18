@@ -2,26 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "III",
-    "GLG",
-    "IRI"
+    "IXI",
+    "2P2",
+    "IYI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "G": {
-      "item": "minecraft:glass"
-    },
-    "L": {
-      "item": "minecraft:redstone_lamp"
-    },
-    "R": {
-      "item": "minecraft:repeater"
-    }
+    "2": { "item": "opencomputers:chip2" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "tag": "c:glass_blocks" },
+    "Y": { "item": "minecraft:redstone_lamp" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:laser_transceiver"
-  }
+  "result": { "count": 1, "id": "computronics:laser_transceiver" }
 }

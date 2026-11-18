@@ -2,26 +2,15 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "GRG",
-    "RCR",
+    "UUU",
+    "1P1",
     "III"
   ],
   "key": {
-    "G": {
-      "item": "minecraft:gold_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone_block"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "U": { "item": "opencomputers:capacitor" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:rack_board_capacitor"
-  }
+  "result": { "count": 1, "id": "computronics:rack_board_capacitor" }
 }

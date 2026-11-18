@@ -2,23 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "III",
-    "ICI",
+    "IXI",
+    "1P1",
     "IRI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "C": {
-      "item": "minecraft:compass"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "R": { "tag": "c:dusts/redstone" },
+    "X": { "item": "minecraft:compass" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:analog_gauge"
-  }
+  "result": { "count": 1, "id": "computronics:analog_gauge" }
 }

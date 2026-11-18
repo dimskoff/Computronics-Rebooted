@@ -1,21 +1,26 @@
 package pl.asie.computronics.oc.environment;
 
 import li.cil.oc.api.Network;
+import li.cil.oc.api.UnrecoverablePersistanceException;
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
 import li.cil.oc.api.network.EnvironmentHost;
+import li.cil.oc.api.network.Message;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.AbstractManagedEnvironment;
-import net.minecraft.world.level.Level;
+import net.minecraft.core.component.DataComponentHolder;
+import net.neoforged.neoforge.common.MutableDataComponentHolder;
+import pl.asie.computronics.config.ComputronicsConfig;
+import pl.asie.computronics.oc.OCData;
+import pl.asie.computronics.oc.SelfDestructFuse;
 
+/** Self-destruct card, component "self_destruct" (original Computronics API). */
 public class EnvironmentCardBoom extends AbstractManagedEnvironment {
-    private final EnvironmentHost host;
-    private int countdown = -1;
-    private float explosionPower = 3.0f;
+    private final SelfDestructFuse fuse;
 
     public EnvironmentCardBoom(EnvironmentHost host) {
-        this.host = host;
+        this.fuse = new SelfDestructFuse(host);
         setNode(Network.newNode(this, Visibility.Neighbors)
                 .withComponent("self_destruct", Visibility.Neighbors)
                 .create());
@@ -29,60 +34,37 @@ public class EnvironmentCardBoom extends AbstractManagedEnvironment {
     @Override
     public void update() {
         super.update();
-        if (countdown > 0) {
-            countdown--;
-            if (countdown == 0) {
-                explode(explosionPower);
-            }
+        if (fuse.tick()) {
+            fuse.explode(ComputronicsConfig.SERVER.cardBoomExplosionPower.get().floatValue(),
+                    ComputronicsConfig.SERVER.cardBoomAllowBlockDamage.get());
         }
     }
 
-    private void explode(float power) {
-        Level world = host.getEnvironmentLevel();
-        if (world != null && !world.isClientSide) {
-            boolean blockDamage = pl.asie.computronics.config.ComputronicsConfig.SERVER.cardBoomAllowBlockDamage.get();
-            float confPower = pl.asie.computronics.config.ComputronicsConfig.SERVER.cardBoomExplosionPower.get().floatValue();
-            Level.ExplosionInteraction interaction = blockDamage ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.MOB;
-            world.explode(null, host.xPosition(), host.yPosition(), host.zPosition(), confPower > 0 ? confPower : power, interaction);
-        }
+    @Override
+    public void onMessage(Message message) {
+        super.onMessage(message);
+        fuse.onMessage(node(), message);
     }
 
-    @Callback(doc = "function(time:number):boolean -- Starts fuse for time in seconds.")
+    @Callback(doc = "function([time:number=5]):number -- Starts the countdown; the card explodes after the given number of seconds.")
     public Object[] start(Context context, Arguments args) {
-        double seconds = args.checkDouble(0);
-        this.countdown = Math.max(1, (int) Math.round(seconds * 20.0));
-        return new Object[]{true};
+        return fuse.start(args.optDouble(0, 5.0), ComputronicsConfig.SERVER.cardBoomFuseTicks.get());
     }
 
-    @Callback(doc = "function():boolean -- Aborts any active self-destruct fuse.")
-    public Object[] abort(Context context, Arguments args) {
-        this.countdown = -1;
-        return new Object[]{true};
-    }
-
-    @Callback(doc = "function():boolean -- Disarms the countdown.")
-    public Object[] disarm(Context context, Arguments args) {
-        this.countdown = -1;
-        return new Object[]{true};
-    }
-
-    @Callback(direct = true, doc = "function():number -- Gets remaining fuse time in seconds.")
+    @Callback(direct = true, doc = "function():number -- Returns the time in seconds left until the explosion.")
     public Object[] time(Context context, Arguments args) {
-        if (countdown < 0) return new Object[]{-1.0};
-        return new Object[]{countdown / 20.0};
+        return fuse.time();
     }
 
-    @Callback(doc = "function([power:number]):boolean -- Detonates the self-destruct card immediately.")
-    public Object[] detonate(Context context, Arguments args) {
-        float power = (float) Math.min(args.optDouble(0, 3.0), 8.0);
-        explode(power);
-        return new Object[]{true};
+    @Override
+    public void loadData(DataComponentHolder holder) throws UnrecoverablePersistanceException {
+        super.loadData(holder);
+        fuse.load(OCData.read(holder));
     }
 
-    @Callback(doc = "function(ticks:number[, power:number]):boolean -- Sets self-destruct countdown timer in ticks.")
-    public Object[] setTime(Context context, Arguments args) {
-        this.countdown = Math.max(1, args.checkInteger(0));
-        this.explosionPower = (float) Math.min(args.optDouble(1, 3.0), 8.0);
-        return new Object[]{true};
+    @Override
+    public void saveData(MutableDataComponentHolder holder) {
+        super.saveData(holder);
+        OCData.write(holder, fuse::save);
     }
 }

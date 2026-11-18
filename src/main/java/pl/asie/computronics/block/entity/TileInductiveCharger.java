@@ -23,8 +23,8 @@ import pl.asie.computronics.init.ModBlockEntities;
 import java.util.List;
 
 public class TileInductiveCharger extends TileEntityComputronics {
-    private boolean enabled = true;
-    private double chargeRate = 100.0; // EU/tick or OC Energy/tick
+    private volatile boolean enabled = true;
+    private volatile double chargeRate = 100.0; // EU/tick or OC Energy/tick
 
     public TileInductiveCharger(BlockPos pos, BlockState state) {
         super(ModBlockEntities.INDUCTIVE_CHARGER.get(), pos, state);
@@ -35,86 +35,103 @@ public class TileInductiveCharger extends TileEntityComputronics {
     }
 
     private Connector connector() {
-        return (Connector) node;
+        return node instanceof Connector c ? c : null;
+    }
+
+    /** Resolves the energy connector of an OC agent (robot / drone) via the public API only. */
+    private static Connector agentConnector(li.cil.oc.api.machine.MachineHost host) {
+        if (host.machine() != null && host.machine().node() instanceof Connector conn) {
+            return conn;
+        }
+        if (host instanceof li.cil.oc.api.network.Environment env && env.node() instanceof Connector conn) {
+            return conn;
+        }
+        return null;
+    }
+
+    /**
+     * Moves up to chargeRate energy from our network into the target connector.
+     * Connector.changeBuffer returns the part of the delta that could NOT be applied; it is refunded.
+     */
+    private void chargeConnector(Connector own, Connector target) {
+        if (target == null || target == own || (target.network() != null && target.network() == own.network())) {
+            return;
+        }
+        double space = target.globalBufferSize() - target.globalBuffer();
+        double toTransfer = Math.min(Math.min(chargeRate, own.globalBuffer()), space);
+        if (toTransfer <= 0 || !own.tryChangeBuffer(-toTransfer)) {
+            return;
+        }
+        double leftover = target.changeBuffer(toTransfer);
+        if (leftover > 0) {
+            own.changeBuffer(leftover);
+        }
+    }
+
+    /** Chargeable.charge returns the energy that could NOT be stored (leftover). */
+    private void chargeItem(Connector own, ItemStack stack) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof li.cil.oc.api.driver.item.Chargeable chargeable) || !chargeable.canCharge(stack)) {
+            return;
+        }
+        double toTransfer = Math.min(chargeRate, own.globalBuffer());
+        if (toTransfer <= 0) return;
+        double wouldRemain = chargeable.charge(stack, toTransfer, true);
+        double accepted = toTransfer - Math.max(0.0, wouldRemain);
+        if (accepted <= 0 || !own.tryChangeBuffer(-accepted)) {
+            return;
+        }
+        double leftover = chargeable.charge(stack, accepted, false);
+        if (leftover > 0) {
+            own.changeBuffer(leftover);
+        }
     }
 
     @Override
     public void tickServer(Level level, BlockPos pos, BlockState state) {
         super.tickServer(level, pos, state);
 
-        if (!enabled || connector() == null || connector().globalBuffer() <= 0) {
+        Connector own = connector();
+        if (!enabled || own == null || own.network() == null || own.globalBuffer() <= 0) {
             return;
         }
 
-        // 1. Charge OpenComputers Robot directly above the inductive charger
+        // 1. Robot directly above (OC's robot block entity implements api.internal.Robot)
         BlockEntity beAbove = level.getBlockEntity(pos.above());
         if (beAbove instanceof Robot robot) {
-            Connector robotConn = null;
-            if (robot.node() instanceof Connector conn) {
-                robotConn = conn;
-            } else if (beAbove instanceof li.cil.oc.common.blockentity.RobotProxy proxy && proxy.robot() != null && proxy.robot().node() instanceof Connector conn) {
-                robotConn = conn;
-            }
-            if (robotConn != null) {
-                double buffer = connector().globalBuffer();
-                double toTransfer = Math.min(chargeRate, buffer);
-                if (toTransfer > 0 && connector().tryChangeBuffer(-toTransfer)) {
-                    robotConn.changeBuffer(toTransfer);
-                }
+            try {
+                chargeConnector(own, agentConnector(robot));
+            } catch (NoClassDefFoundError | ClassCastException e) {
+                // OC internals changed; skip robot charging
             }
         }
 
-        // 2. Charge OpenComputers Drone in the 3D volume above (up to 4 blocks high, allowing full multiblock pads)
+        // 2. Drones hovering up to 3 blocks above the pad
         AABB chargeBox = new AABB(
                 pos.getX(), pos.getY() + 1.0, pos.getZ(),
                 pos.getX() + 1.0, pos.getY() + 4.0, pos.getZ() + 1.0
         );
-
-        List<Entity> list = level.getEntities((Entity) null, chargeBox);
-        for (Entity entity : list) {
-            if (entity instanceof Drone drone && drone.machine() != null) {
-                double buffer = connector().globalBuffer();
-                double toTransfer = Math.min(chargeRate, buffer);
-                if (toTransfer > 0 && connector().tryChangeBuffer(-toTransfer)) {
-                    if (drone.machine().node() instanceof Connector droneConn) {
-                        droneConn.changeBuffer(toTransfer);
-                    }
-                }
+        for (Entity entity : level.getEntities((Entity) null, chargeBox)) {
+            if (own.globalBuffer() <= 0) return;
+            if (entity instanceof Drone drone) {
+                chargeConnector(own, agentConnector(drone));
             }
         }
 
-        // 3. Charge players standing on or directly above the charger pad
+        // 3. Chargeable items (tablets etc.) of players standing on the pad
         AABB playerBox = new AABB(
                 pos.getX(), pos.getY() + 1.0, pos.getZ(),
                 pos.getX() + 1.0, pos.getY() + 2.5, pos.getZ() + 1.0
         );
         List<Player> players = level.getEntitiesOfClass(Player.class, playerBox);
         for (Player p : players) {
-            double buffer = connector().globalBuffer();
-            if (buffer <= 0) break;
             for (ItemStack itemStack : p.getInventory().items) {
-                if (itemStack.getItem() instanceof li.cil.oc.api.driver.item.Chargeable chargeable && chargeable.canCharge(itemStack)) {
-                    double toTransfer = Math.min(chargeRate, connector().globalBuffer());
-                    if (toTransfer <= 0) break;
-                    double charged = chargeable.charge(itemStack, toTransfer, false);
-                    if (charged > 0) {
-                        connector().tryChangeBuffer(-charged);
-                    }
-                }
+                if (own.globalBuffer() <= 0) return;
+                chargeItem(own, itemStack);
             }
-            ItemStack offhand = p.getOffhandItem();
-            if (offhand.getItem() instanceof li.cil.oc.api.driver.item.Chargeable chargeable && chargeable.canCharge(offhand)) {
-                double toTransfer = Math.min(chargeRate, connector().globalBuffer());
-                if (toTransfer > 0) {
-                    double charged = chargeable.charge(offhand, toTransfer, false);
-                    if (charged > 0) {
-                        connector().tryChangeBuffer(-charged);
-                    }
-                }
-            }
+            if (own.globalBuffer() <= 0) return;
+            chargeItem(own, p.getOffhandItem());
         }
     }
-
     @Callback(direct = true, doc = "function():boolean -- Checks if the charger is enabled.")
     public Object[] isCharging(Context context, Arguments args) {
         return result(enabled);

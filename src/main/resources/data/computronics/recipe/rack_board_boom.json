@@ -2,29 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "TNT",
-    "RCR",
+    "TXT",
+    "1P1",
     "III"
   ],
   "key": {
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "N": {
-      "item": "minecraft:redstone_torch"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "T": { "item": "minecraft:tnt" },
+    "X": { "item": "minecraft:redstone_torch" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:rack_board_boom"
-  }
+  "result": { "count": 1, "id": "computronics:rack_board_boom" }
 }

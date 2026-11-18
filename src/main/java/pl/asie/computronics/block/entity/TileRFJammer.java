@@ -11,14 +11,16 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import pl.asie.computronics.config.ComputronicsServerConfig;
 import pl.asie.computronics.init.ModBlockEntities;
 import pl.asie.computronics.network.IRFJammer;
 import pl.asie.computronics.network.RFJammerManager;
 
 public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
-    private int frequency = 0;       // 0 = broad spectrum
-    private double power = 10.0;     // 1.0 to 100.0
-    private boolean enabled = false;
+    private volatile int frequency = 0;       // 0 = broad spectrum
+    private volatile double power = 10.0;     // 1.0 to 100.0
+    private volatile boolean enabled = false; // switched on by a computer
+    private volatile boolean powered = false; // had enough energy on the last tick
 
     public TileRFJammer(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RF_JAMMER.get(), pos, state);
@@ -39,13 +41,13 @@ public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
     }
 
     private Connector connector() {
-        return (Connector) node;
+        return node instanceof Connector c ? c : null;
     }
 
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level != null && !level.isClientSide && enabled) {
+        if (level != null && !level.isClientSide) {
             RFJammerManager.INSTANCE.register(this);
         }
     }
@@ -62,15 +64,32 @@ public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
         RFJammerManager.INSTANCE.unregister(this);
     }
 
+    /** Energy drawn per tick: rfJammerEnergyPerSecond / 20, scaled by power (power 10 = 1x). */
+    private double energyPerTick() {
+        double perSecond;
+        try {
+            perSecond = ComputronicsServerConfig.SERVER.rfJammerEnergyPerSecond.get();
+        } catch (Exception e) {
+            perSecond = 20.0;
+        }
+        return perSecond / 20.0 * (power / 10.0);
+    }
+
     @Override
     public void tickServer(Level level, BlockPos pos, BlockState state) {
         super.tickServer(level, pos, state);
-        if (enabled && connector() != null) {
-            double cost = power * 0.1;
-            if (!connector().tryChangeBuffer(-cost)) {
-                // Not enough power, auto shutoff
-                setEnabledInternal(false);
-            }
+        if (!enabled) {
+            powered = false;
+            return;
+        }
+        double cost = energyPerTick();
+        Connector c = connector();
+        if (cost <= 0) {
+            powered = true;
+        } else if (c != null && c.network() != null) {
+            powered = c.tryChangeBuffer(-cost);
+        } else {
+            powered = false;
         }
     }
 
@@ -82,22 +101,14 @@ public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
         return power;
     }
 
+    /** Jamming only while switched on and powered. */
+    @Override
     public boolean isEnabled() {
-        return enabled;
+        return enabled && powered;
     }
 
     public double getEffectiveRadius() {
-        return Math.min(64.0, Math.sqrt(power) * 6.0);
-    }
-
-    private void setEnabledInternal(boolean state) {
-        this.enabled = state;
-        if (state) {
-            RFJammerManager.INSTANCE.register(this);
-        } else {
-            RFJammerManager.INSTANCE.unregister(this);
-        }
-        setChanged();
+        return Math.min(RFJammerManager.maxRange(), Math.sqrt(power) * 6.0);
     }
 
     @Callback(direct = true, doc = "function():number -- Gets the current targeted frequency (0 = broad spectrum).")
@@ -120,26 +131,32 @@ public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
     @Callback(doc = "function(power:number):number -- Sets the transmitter power (1.0 to 100.0).")
     public Object[] setPower(Context context, Arguments args) {
         double val = args.checkDouble(0);
-        this.power = Math.max(1.0, Math.min(val, 100.0));
+        this.power = Double.isNaN(val) ? 10.0 : Math.max(1.0, Math.min(val, 100.0));
         setChanged();
         return result(this.power);
     }
 
-    @Callback(direct = true, doc = "function():boolean -- Checks if the RF jammer is running.")
+    @Callback(direct = true, doc = "function():boolean, boolean -- Returns whether the jammer is switched on, and whether it is actually jamming (powered).")
     public Object[] isEnabled(Context context, Arguments args) {
-        return result(enabled);
+        return result(enabled, enabled && powered);
     }
 
     @Callback(doc = "function(state:boolean):boolean -- Enables or disables RF jamming.")
     public Object[] setEnabled(Context context, Arguments args) {
-        boolean state = args.checkBoolean(0);
-        setEnabledInternal(state);
+        this.enabled = args.checkBoolean(0);
+        if (!enabled) powered = false;
+        setChanged();
         return result(this.enabled);
     }
 
     @Callback(direct = true, doc = "function():number -- Gets the jamming radius in blocks.")
     public Object[] getEffectiveRadius(Context context, Arguments args) {
         return result(getEffectiveRadius());
+    }
+
+    @Callback(direct = true, doc = "function():number -- Gets the energy consumed per tick while enabled.")
+    public Object[] getEnergyUsage(Context context, Arguments args) {
+        return result(energyPerTick());
     }
 
     @Override
@@ -154,10 +171,7 @@ public class TileRFJammer extends TileEntityComputronics implements IRFJammer {
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         this.frequency = tag.getInt("frequency");
-        this.power = tag.contains("power") ? tag.getDouble("power") : 10.0;
+        this.power = tag.contains("power") ? Math.max(1.0, Math.min(tag.getDouble("power"), 100.0)) : 10.0;
         this.enabled = tag.getBoolean("enabled");
-        if (this.enabled && level != null && !level.isClientSide) {
-            RFJammerManager.INSTANCE.register(this);
-        }
     }
 }

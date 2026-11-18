@@ -7,72 +7,65 @@ import li.cil.oc.api.machine.Context;
 import li.cil.oc.api.network.EnvironmentHost;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.AbstractManagedEnvironment;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
+import pl.asie.computronics.oc.OCData;
 
-import java.util.HashMap;
-import java.util.Map;
-
+/** Particle card, component "particle" (original Computronics API). */
 public class EnvironmentCardFX extends AbstractManagedEnvironment {
-    private final EnvironmentHost host;
-    private static final Map<String, ParticleOptions> PARTICLES = new HashMap<>();
+    /** Max distance from the host in blocks (hardcoded; original used a larger value). */
+    public static final double MAX_RANGE = 16.0;
+    /** Energy per spawned particle (hardcoded). */
+    public static final double ENERGY_PER_PARTICLE = 0.5;
 
-    static {
-        PARTICLES.put("portal", ParticleTypes.PORTAL);
-        PARTICLES.put("flame", ParticleTypes.FLAME);
-        PARTICLES.put("smoke", ParticleTypes.SMOKE);
-        PARTICLES.put("heart", ParticleTypes.HEART);
-        PARTICLES.put("note", ParticleTypes.NOTE);
-        PARTICLES.put("explosion", ParticleTypes.EXPLOSION);
-        PARTICLES.put("crit", ParticleTypes.CRIT);
-        PARTICLES.put("enchant", ParticleTypes.ENCHANT);
-        PARTICLES.put("firework", ParticleTypes.FIREWORK);
-        PARTICLES.put("sculk_charge", ParticleTypes.SCULK_CHARGE_POP);
-        PARTICLES.put("electric_spark", ParticleTypes.ELECTRIC_SPARK);
-        PARTICLES.put("sonic_boom", ParticleTypes.SONIC_BOOM);
-        PARTICLES.put("witch", ParticleTypes.WITCH);
-        PARTICLES.put("cloud", ParticleTypes.CLOUD);
-    }
+    private final EnvironmentHost host;
 
     public EnvironmentCardFX(EnvironmentHost host) {
         this.host = host;
         setNode(Network.newNode(this, Visibility.Neighbors)
-                .withComponent("particle_fx", Visibility.Neighbors)
-                .withConnector(250)
+                .withComponent("particle", Visibility.Neighbors)
+                .withConnector()
                 .create());
     }
 
-    @Callback(direct = true, doc = "function():table -- Returns all supported particle effect names.")
-    public Object[] getAvailableParticles(Context context, Arguments args) {
-        return new Object[]{PARTICLES.keySet().toArray(new String[0])};
-    }
-
-    @Callback(direct = true, limit = 16, doc = "function(name:string [, dx:number, dy:number, dz:number, count:number, speed:number]):boolean -- Spawns visual particle effect.")
+    @Callback(doc = "function(name:string, x:number, y:number, z:number[, velocity:number]):boolean or "
+            + "function(name:string, x:number, y:number, z:number, vx:number, vy:number, vz:number):boolean "
+            + "-- Spawns a particle relative to the card's host.")
     public Object[] spawn(Context context, Arguments args) {
-        Level world = host != null ? host.getEnvironmentLevel() : null;
-        if (!(world instanceof ServerLevel serverLevel)) {
+        String name = args.checkString(0);
+        double dx = args.checkDouble(1), dy = args.checkDouble(2), dz = args.checkDouble(3);
+        if (!Double.isFinite(dx) || !Double.isFinite(dy) || !Double.isFinite(dz)
+                || dx * dx + dy * dy + dz * dz > MAX_RANGE * MAX_RANGE) {
+            return new Object[]{false, "location out of bounds"};
+        }
+        ResourceLocation id = ResourceLocation.tryParse(name);
+        ParticleType<?> type = id == null ? null : BuiltInRegistries.PARTICLE_TYPE.get(id);
+        if (!(type instanceof SimpleParticleType simple)) {
+            return new Object[]{false, "invalid particle type"};
+        }
+        if (!(host.getEnvironmentLevel() instanceof ServerLevel level)) {
             return new Object[]{false, "world unavailable"};
         }
-
-        String name = args.checkString(0).toLowerCase();
-        ParticleOptions particle = PARTICLES.get(name);
-        if (particle == null) {
-            return new Object[]{false, "unknown particle type: " + name};
+        if (!OCData.tryConsume(node(), ENERGY_PER_PARTICLE)) {
+            return new Object[]{false, "not enough energy"};
         }
-
-        double dx = args.optDouble(1, 0.0);
-        double dy = args.optDouble(2, 0.5);
-        double dz = args.optDouble(3, 0.0);
-        int count = Math.max(1, Math.min(args.optInteger(4, 5), 100));
-        double speed = Math.max(0.0, Math.min(args.optDouble(5, 0.1), 5.0));
-
-        double x = host.xPosition() + dx;
-        double y = host.yPosition() + dy;
-        double z = host.zPosition() + dz;
-
-        serverLevel.sendParticles(particle, x, y, z, count, 0.25, 0.25, 0.25, speed);
+        double x = host.xPosition() + dx, y = host.yPosition() + dy, z = host.zPosition() + dz;
+        if (args.count() >= 7) {
+            double vx = clampV(args.checkDouble(4)), vy = clampV(args.checkDouble(5)), vz = clampV(args.checkDouble(6));
+            // count 0: offsets are used as the exact velocity
+            level.sendParticles(simple, x, y, z, 0, vx, vy, vz, 1.0);
+        } else {
+            double v = clampV(args.optDouble(4, 0.0));
+            level.sendParticles(simple, x, y, z, 1, 0, 0, 0, Math.abs(v));
+        }
         return new Object[]{true};
+    }
+
+    private static double clampV(double v) {
+        if (!Double.isFinite(v)) return 0;
+        return Math.max(-5.0, Math.min(5.0, v));
     }
 }

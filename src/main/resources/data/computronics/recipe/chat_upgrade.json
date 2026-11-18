@@ -2,23 +2,15 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " R ",
-    "ICI",
-    " R "
+    " X ",
+    "1P1",
+    " I "
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "C": {
-      "item": "computronics:chat_box"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "computronics:chat_box" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:chat_upgrade"
-  }
+  "result": { "count": 1, "id": "computronics:chat_upgrade" }
 }

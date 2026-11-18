@@ -9,16 +9,19 @@ import li.cil.oc.api.network.Connector;
 import li.cil.oc.api.network.EnvironmentHost;
 import li.cil.oc.api.network.Visibility;
 import li.cil.oc.api.prefab.ComponentConnectableRackMountableEnvironment;
+import pl.asie.computronics.config.ComputronicsConfig;
 
 import java.util.Map;
 
+/** Rack capacitor board, component "rack_capacitor"; capacity from config rackCapacitorCapacity. */
 public class EnvironmentRackCapacitorBoard extends ComponentConnectableRackMountableEnvironment {
-    public static final double CAPACITY = 50000.0;
+    private final double capacity;
 
     public EnvironmentRackCapacitorBoard(EnvironmentHost host) {
+        this.capacity = ComputronicsConfig.SERVER.rackCapacitorCapacity.get();
         setNode(Network.newNode(this, Visibility.Network)
-                .withComponent("capacitor_board", Visibility.Network)
-                .withConnector(CAPACITY)
+                .withComponent("rack_capacitor", Visibility.Network)
+                .withConnector(capacity)
                 .create());
     }
 
@@ -28,22 +31,18 @@ public class EnvironmentRackCapacitorBoard extends ComponentConnectableRackMount
                 DeviceInfo.DeviceAttribute.Class, DeviceInfo.DeviceClass.Power,
                 DeviceInfo.DeviceAttribute.Description, "Rack High-Density Capacitor",
                 DeviceInfo.DeviceAttribute.Vendor, "Computronics",
-                DeviceInfo.DeviceAttribute.Product, "CapacitorBoard-50k",
-                DeviceInfo.DeviceAttribute.Capacity, "50000"
+                DeviceInfo.DeviceAttribute.Product, "CapacitorBoard",
+                DeviceInfo.DeviceAttribute.Capacity, String.valueOf((long) capacity)
         );
     }
 
-    private Connector connector() {
-        return (Connector) node();
+    @Callback(direct = true, doc = "function():number -- Returns the amount of energy stored in this capacitor.")
+    public Object[] energy(Context context, Arguments args) {
+        return new Object[]{node() instanceof Connector c ? c.localBuffer() : 0.0};
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets stored energy in rack capacitor.")
-    public Object[] getEnergy(Context context, Arguments args) {
-        return new Object[]{connector() != null ? connector().globalBuffer() : 0.0};
-    }
-
-    @Callback(direct = true, doc = "function():number -- Gets maximum capacitor buffer capacity (50000 EU).")
-    public Object[] getMaxEnergy(Context context, Arguments args) {
-        return new Object[]{CAPACITY};
+    @Callback(direct = true, doc = "function():number -- Returns the maximum amount of energy this capacitor can store.")
+    public Object[] maxEnergy(Context context, Arguments args) {
+        return new Object[]{node() instanceof Connector c ? c.localBufferSize() : capacity};
     }
 }

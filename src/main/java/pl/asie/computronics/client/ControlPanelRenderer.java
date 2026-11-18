@@ -2,596 +2,215 @@ package pl.asie.computronics.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.AttachFace;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import org.joml.Matrix4f;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.ResourceLocation;
+import pl.asie.computronics.Computronics;
 import pl.asie.computronics.block.entity.TileControlPanel;
+import pl.asie.computronics.panel.PanelComponent;
+import pl.asie.computronics.panel.PanelOrientation;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Draws panel components in "panel space" (u right, v down, w towards the viewer, units = blocks),
+ * see {@link PanelOrientation}. One transform handles floor, ceiling and all wall orientations.
+ */
 public class ControlPanelRenderer implements BlockEntityRenderer<TileControlPanel> {
+    private static final ResourceLocation WHITE = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "textures/misc/white.png");
+    private static final float PX = 1 / 16f;
+    private static final float C = PanelOrientation.CELL;
+    private static final float M = PanelOrientation.MARGIN;
 
-    // Standard 7-segment bitmasks (A=0x01, B=0x02, C=0x04, D=0x08, E=0x10, F=0x20, G=0x40)
-    private static final byte[] SEG_DIGITS = {
-            0x3F, // 0: A B C D E F
-            0x06, // 1: B C
-            0x5B, // 2: A B D E G
-            0x4F, // 3: A B C D G
-            0x66, // 4: B C F G
-            0x6D, // 5: A C D F G
-            0x7D, // 6: A C D E F G
-            0x07, // 7: A B C
-            0x7F, // 8: A B C D E F G
-            0x6F, // 9: A B C D F G
-            0x77, // A: A B C E F G
-            0x7C, // B: C D E F G (b)
-            0x39, // C: A D E F
-            0x5E, // D: B C D E G (d)
-            0x79, // E: A D E F G
-            0x71  // F: A E F G
+    // segment bits: a b c d e f g (bit 0 = a)
+    private static final String SEG_CHARS = "0123456789ABCDEF- ";
+    private static final int[] SEG_BITS = {
+            0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F,
+            0x77, 0x7C, 0x39, 0x5E, 0x79, 0x71, 0x40, 0x00
     };
 
-    public ControlPanelRenderer(BlockEntityRendererProvider.Context context) {}
+    private final Font font;
+
+    public ControlPanelRenderer(BlockEntityRendererProvider.Context context) {
+        this.font = context.getFont();
+    }
 
     @Override
-    public void render(TileControlPanel panel, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
-        BlockState state = panel.getBlockState();
-        if (!state.hasProperty(BlockStateProperties.ATTACH_FACE) || !state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-            return;
-        }
+    public void render(TileControlPanel panel, float partialTick, PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        var components = panel.layout().snapshot();
+        if (components.isEmpty()) return;
+        long time = panel.getLevel() != null ? panel.getLevel().getGameTime() : 0;
 
-        AttachFace face = state.getValue(BlockStateProperties.ATTACH_FACE);
-        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        pose.pushPose();
+        pose.mulPose(PanelOrientation.of(panel.getBlockState()).matrix());
+        VertexConsumer vc = buffers.getBuffer(RenderType.entityCutoutNoCull(WHITE));
 
-        // ====================================================================
-        // PASS 1: Render All Solid Geometry (Buttons, Lamps, Switches, 7-Seg)
-        // ====================================================================
-        poseStack.pushPose();
-        Matrix4f pose = poseStack.last().pose();
-        VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.FONT_QUAD);
-
-        for (int slot = 0; slot < TileControlPanel.TOTAL_SLOTS; slot++) {
-            TileControlPanel.PanelElement elem = panel.getElement(slot);
-            if (elem == null || elem.type == TileControlPanel.ElementType.NONE) continue;
-
-            int gx = slot % TileControlPanel.GRID_SIZE;
-            int gy = slot / TileControlPanel.GRID_SIZE;
-            int sizeX = Math.max(1, Math.min(8, elem.sizeX));
-            int sizeY = Math.max(1, Math.min(8, elem.sizeY));
-
-            float u1 = gx / 8.0f;
-            float v1 = gy / 8.0f;
-            float u2 = (gx + sizeX) / 8.0f;
-            float v2 = (gy + sizeY) / 8.0f;
-
-            float pad = 0.012f;
-            float cu1 = u1 + pad;
-            float cv1 = v1 + pad;
-            float cu2 = u2 - pad;
-            float cv2 = v2 - pad;
-
-            if (elem.type == TileControlPanel.ElementType.BUTTON) {
-                // Tactile push button
-                boolean pressed = (System.currentTimeMillis() - elem.lastPressTime) < 250;
-                float h1 = 0.006f;
-                float h2 = pressed ? 0.014f : 0.038f;
-
-                int br = (elem.color >> 16) & 0xFF;
-                int bg = (elem.color >> 8) & 0xFF;
-                int bb = elem.color & 0xFF;
-
-                float capPad = 0.008f;
-                renderSurfaceBox(pose, vc, face, facing, cu1 + capPad, cv1 + capPad, cu2 - capPad, cv2 - capPad,
-                        h1, h2, br, bg, bb);
-
-                // Top highlight
-                renderFaceQuad(pose, vc, face, facing, cu1 + capPad + 0.006f, cv1 + capPad + 0.006f,
-                        cu2 - capPad - 0.006f, cv2 - capPad - 0.006f, h2 + 0.001f,
-                        Math.min(255, br + 45), Math.min(255, bg + 45), Math.min(255, bb + 45));
-
-            } else if (elem.type == TileControlPanel.ElementType.SWITCH) {
-                // Industrial Rocker / Toggle Switch
-                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.003f, 25, 28, 32);
-                renderFaceQuad(pose, vc, face, facing, cu1 + 0.006f, cv1 + 0.006f, cu2 - 0.006f, cv2 - 0.006f, 0.004f, 10, 12, 14);
-
-                float midV = (cv1 + cv2) / 2.0f;
-                int sr = (elem.color >> 16) & 0xFF;
-                int sg = (elem.color >> 8) & 0xFF;
-                int sb = elem.color & 0xFF;
-
-                float hUp = elem.active ? 0.032f : 0.012f;
-                float hDown = elem.active ? 0.012f : 0.032f;
-
-                // Upper half of rocker
-                renderSurfaceBox(pose, vc, face, facing, cu1 + 0.010f, cv1 + 0.010f, cu2 - 0.010f, midV,
-                        0.005f, hUp, (int)(sr * 0.9), (int)(sg * 0.9), (int)(sb * 0.9));
-                // Lower half of rocker
-                renderSurfaceBox(pose, vc, face, facing, cu1 + 0.010f, midV, cu2 - 0.010f, cv2 - 0.010f,
-                        0.005f, hDown, (int)(sr * 0.6), (int)(sg * 0.6), (int)(sb * 0.6));
-
-                // Glowing indicator dot when ON
-                if (elem.active) {
-                    renderFaceQuad(pose, vc, face, facing, cu1 + 0.018f, cv1 + 0.014f, cu2 - 0.018f, cv1 + 0.024f,
-                            hUp + 0.002f, 0, 255, 120);
-                }
-
-            } else if (elem.type == TileControlPanel.ElementType.LAMP) {
-                // Sleek indicator lamp
-                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.002f, 50, 56, 64);
-
-                float lensPad = 0.008f;
-                int col = elem.active ? elem.color : 0x18201A;
-                int r = (col >> 16) & 0xFF;
-                int g = (col >> 8) & 0xFF;
-                int b = col & 0xFF;
-
-                renderFaceQuad(pose, vc, face, facing, cu1 + lensPad, cv1 + lensPad, cu2 - lensPad, cv2 - lensPad,
-                        0.005f, r, g, b);
-
-                if (elem.active) {
-                    float corePad = lensPad + (sizeX * 0.015f);
-                    renderFaceQuad(pose, vc, face, facing, cu1 + corePad, cv1 + corePad, cu2 - corePad, cv2 - corePad,
-                            0.006f, Math.min(255, r + 90), Math.min(255, g + 90), Math.min(255, b + 90));
-                }
-
-            } else if (elem.type == TileControlPanel.ElementType.SEVEN_SEGMENT) {
-                // High-fidelity slanted 7-segment digital LED display matching MicroTechnics diagram
-                renderFaceQuad(pose, vc, face, facing, cu1, cv1, cu2, cv2, 0.003f, 15, 18, 22);
-                renderFaceQuad(pose, vc, face, facing, cu1 + 0.004f, cv1 + 0.004f, cu2 - 0.004f, cv2 - 0.004f,
-                        0.004f, 6, 8, 11);
-
-                String text = elem.displayValue != null && !elem.displayValue.isEmpty() ? elem.displayValue : "0";
-                renderSevenSegmentDisplay(pose, vc, face, facing, cu1 + 0.006f, cv1 + 0.006f, cu2 - 0.006f, cv2 - 0.006f,
-                        0.007f, text, elem.color, elem.active, sizeX);
-
-            } else if (elem.type == TileControlPanel.ElementType.TEXT) {
-                // User requested: NO background box on text element, ONLY the text itself!
+        for (PanelComponent c : components) {
+            float x0 = M + c.x * C, y0 = M + c.y * C;
+            float x1 = x0 + c.width * C, y1 = y0 + c.height * C;
+            float pad = C * 0.08f;
+            x0 += pad; y0 += pad; x1 -= pad; y1 -= pad;
+            switch (c.type) {
+                case BUTTON -> renderButton(pose, vc, buffers, c, time, x0, y0, x1, y1, light);
+                case SWITCH -> renderSwitch(pose, vc, c, x0, y0, x1, y1, light);
+                case LAMP -> renderLamp(pose, vc, buffers, c, x0, y0, x1, y1, light);
+                case SEGMENT -> renderSegment(pose, vc, c, x0, y0, x1, y1);
+                case LABEL -> drawText(pose, buffers, c.label, c.color, x0, y0, x1, y1, 0.002f, light);
             }
         }
-        poseStack.popPose();
+        pose.popPose();
+    }
 
-        // ====================================================================
-        // PASS 2: Render All In-World Text Labels (Buttons, Lamps, Text Panels)
-        // ====================================================================
-        Font font = Minecraft.getInstance().font;
-        for (int slot = 0; slot < TileControlPanel.TOTAL_SLOTS; slot++) {
-            TileControlPanel.PanelElement elem = panel.getElement(slot);
-            if (elem == null || elem.type == TileControlPanel.ElementType.NONE) continue;
-            if (elem.label == null || elem.label.trim().isEmpty()) continue;
+    private void renderButton(PoseStack pose, VertexConsumer vc, MultiBufferSource buffers, PanelComponent c, long time,
+                              float x0, float y0, float x1, float y1, int light) {
+        boolean pressed = time < c.pressedUntil;
+        box(pose, vc, x0, y0, x1, y1, 0, 0.4f * PX, 0x202428, light);                     // bezel
+        float in = Math.min(x1 - x0, y1 - y0) * 0.12f;
+        float h = pressed ? 0.6f * PX : 1.4f * PX;
+        int col = pressed ? shade(c.color, 0.7f) : c.color;
+        box(pose, vc, x0 + in, y0 + in, x1 - in, y1 - in, 0.4f * PX, h, col, light);
+        drawText(pose, buffers, c.label, contrast(c.color), x0 + in, y0 + in, x1 - in, y1 - in, h + 0.002f, light);
+    }
 
-            int gx = slot % TileControlPanel.GRID_SIZE;
-            int gy = slot / TileControlPanel.GRID_SIZE;
-            int sizeX = Math.max(1, Math.min(8, elem.sizeX));
-            int sizeY = Math.max(1, Math.min(8, elem.sizeY));
+    private void renderSwitch(PoseStack pose, VertexConsumer vc, PanelComponent c, float x0, float y0, float x1, float y1, int light) {
+        box(pose, vc, x0, y0, x1, y1, 0, 0.4f * PX, 0x202428, light);
+        float w = x1 - x0, h = y1 - y0;
+        float cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+        // slot
+        box(pose, vc, cx - w * 0.12f, y0 + h * 0.18f, cx + w * 0.12f, y1 - h * 0.18f, 0.4f * PX, 0.5f * PX, 0x0A0A0A, light);
+        // lever: up = on
+        float ly = c.state ? y0 + h * 0.15f : cy + h * 0.05f;
+        box(pose, vc, cx - w * 0.2f, ly, cx + w * 0.2f, ly + h * 0.3f, 0.5f * PX, 2.0f * PX, c.color, light);
+        // status LED
+        int led = c.state ? 0x30FF50 : 0x401010;
+        box(pose, vc, x0 + w * 0.06f, y0 + h * 0.06f, x0 + w * 0.2f, y0 + h * 0.2f, 0.4f * PX, 0.6f * PX, led,
+                c.state ? LightTexture.FULL_BRIGHT : light);
+    }
 
-            float u1 = gx / 8.0f;
-            float v1 = gy / 8.0f;
-            float u2 = (gx + sizeX) / 8.0f;
-            float v2 = (gy + sizeY) / 8.0f;
+    private void renderLamp(PoseStack pose, VertexConsumer vc, MultiBufferSource buffers, PanelComponent c,
+                            float x0, float y0, float x1, float y1, int light) {
+        box(pose, vc, x0, y0, x1, y1, 0, 0.4f * PX, 0x303438, light);
+        float in = Math.min(x1 - x0, y1 - y0) * 0.1f;
+        int col = c.state ? c.color : shade(c.color, 0.22f);
+        box(pose, vc, x0 + in, y0 + in, x1 - in, y1 - in, 0.4f * PX, 0.9f * PX, col, c.state ? LightTexture.FULL_BRIGHT : light);
+        drawText(pose, buffers, c.label, contrast(col), x0 + in, y0 + in, x1 - in, y1 - in, 0.9f * PX + 0.002f,
+                c.state ? LightTexture.FULL_BRIGHT : light);
+    }
 
-            float pad = 0.012f;
-            float cu1 = u1 + pad;
-            float cv1 = v1 + pad;
-            float cu2 = u2 - pad;
-            float cv2 = v2 - pad;
-
-            if (elem.type == TileControlPanel.ElementType.BUTTON) {
-                boolean pressed = (System.currentTimeMillis() - elem.lastPressTime) < 250;
-                float h2 = pressed ? 0.014f : 0.038f;
-                float capPad = 0.008f;
-                renderInWorldText(poseStack, buffer, font, face, facing,
-                        cu1 + capPad, cv1 + capPad, cu2 - capPad, cv2 - capPad, h2 + 0.002f,
-                        elem.label, elem.textColor, elem.bold, 0.85f);
-            } else if (elem.type == TileControlPanel.ElementType.LAMP) {
-                renderInWorldText(poseStack, buffer, font, face, facing,
-                        cu1, cv1, cu2, cv2, 0.008f,
-                        elem.label, elem.textColor, elem.bold, 0.85f);
-            } else if (elem.type == TileControlPanel.ElementType.TEXT) {
-                renderInWorldText(poseStack, buffer, font, face, facing,
-                        cu1, cv1, cu2, cv2, 0.008f,
-                        elem.label, elem.textColor, elem.bold, elem.textScale);
+    private void renderSegment(PoseStack pose, VertexConsumer vc, PanelComponent c, float x0, float y0, float x1, float y1) {
+        int bg = 0x0C0C0C;
+        quad(pose, vc, x0, y0, x1, y1, 0.0015f, bg, LightTexture.FULL_BRIGHT);
+        int n = c.digits();
+        // right-align the text, '.' attaches to the previous digit
+        int[] bits = new int[n];
+        boolean[] dots = new boolean[n];
+        String v = c.value.toUpperCase();
+        int d = n - 1;
+        for (int i = v.length() - 1; i >= 0 && d >= 0; i--) {
+            char ch = v.charAt(i);
+            if (ch == '.') {
+                dots[d] = true;
+                continue;
             }
+            int idx = SEG_CHARS.indexOf(ch);
+            bits[d--] = idx >= 0 ? SEG_BITS[idx] : 0x08; // unknown -> underscore
+        }
+        float dw = (x1 - x0) / n;
+        int on = c.color, off = shade(c.color, 0.12f);
+        for (int i = 0; i < n; i++) {
+            float dx0 = x0 + i * dw + dw * 0.15f, dx1 = x0 + (i + 1) * dw - dw * 0.2f;
+            float dy0 = y0 + (y1 - y0) * 0.1f, dy1 = y1 - (y1 - y0) * 0.1f;
+            float t = Math.min(dx1 - dx0, dy1 - dy0) * 0.16f;
+            float my = (dy0 + dy1) / 2;
+            float[][] seg = {
+                    {dx0 + t, dy0, dx1 - t, dy0 + t},          // a
+                    {dx1 - t, dy0 + t, dx1, my - t / 2},       // b
+                    {dx1 - t, my + t / 2, dx1, dy1 - t},       // c
+                    {dx0 + t, dy1 - t, dx1 - t, dy1},          // d
+                    {dx0, my + t / 2, dx0 + t, dy1 - t},       // e
+                    {dx0, dy0 + t, dx0 + t, my - t / 2},       // f
+                    {dx0 + t, my - t / 2, dx1 - t, my + t / 2} // g
+            };
+            for (int s = 0; s < 7; s++) {
+                boolean lit = (bits[i] & (1 << s)) != 0;
+                quad(pose, vc, seg[s][0], seg[s][1], seg[s][2], seg[s][3], 0.003f, lit ? on : off, LightTexture.FULL_BRIGHT);
+            }
+            quad(pose, vc, dx1 + dw * 0.04f, dy1 - t, dx1 + dw * 0.04f + t, dy1, 0.003f, dots[i] ? on : off, LightTexture.FULL_BRIGHT);
         }
     }
 
-    // ========================================================================
-    // 7-Segment High-Fidelity Slanted Geometry (MicroTechnics.ru Diagram)
-    // ========================================================================
+    // ------------------------------------------------------------------ primitives
 
-    private static class DigitSlot {
-        char ch;
-        boolean hasDot;
-        DigitSlot(char ch, boolean hasDot) {
-            this.ch = ch;
-            this.hasDot = hasDot;
-        }
-    }
-
-    private static void renderSevenSegmentDisplay(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                                 float u1, float v1, float u2, float v2, float h,
-                                                 String rawText, int color, boolean active, int totalDigits) {
-        int digitsCount = Math.max(1, totalDigits);
-
-        // Parse text into individual digit slots with decimal points
-        List<DigitSlot> parsed = new ArrayList<>();
-        int len = rawText.length();
-        for (int i = 0; i < len; i++) {
-            char c = rawText.charAt(i);
-            if (c == '.') {
-                if (!parsed.isEmpty()) {
-                    parsed.get(parsed.size() - 1).hasDot = true;
-                } else {
-                    parsed.add(new DigitSlot('0', true));
-                }
-            } else {
-                parsed.add(new DigitSlot(c, false));
-            }
-        }
-
-        // Align right to match digitsCount
-        List<DigitSlot> slots = new ArrayList<>();
-        if (parsed.size() < digitsCount) {
-            int pad = digitsCount - parsed.size();
-            for (int k = 0; k < pad; k++) {
-                slots.add(new DigitSlot(' ', false));
-            }
-            slots.addAll(parsed);
-        } else if (parsed.size() > digitsCount) {
-            slots = parsed.subList(parsed.size() - digitsCount, parsed.size());
-        } else {
-            slots = parsed;
-        }
-
-        float totalW = u2 - u1;
-        float slotW = totalW / digitsCount;
-        float totalH = v2 - v1;
-
-        int onR = (color >> 16) & 0xFF;
-        int onG = (color >> 8) & 0xFF;
-        int onB = color & 0xFF;
-
-        // Faint realistic unlit segment tint
-        int offR = Math.max(12, (int)(onR * 0.12f));
-        int offG = Math.max(16, (int)(onG * 0.12f));
-        int offB = Math.max(18, (int)(onB * 0.12f));
-
-        for (int i = 0; i < digitsCount; i++) {
-            DigitSlot slot = slots.get(i);
-            byte mask = active ? getSegmentMask(slot.ch) : 0x00;
-
-            float slotU1 = u1 + i * slotW;
-            float slotU2 = u1 + (i + 1) * slotW;
-
-            // Digit proportions: Aspect ratio ~1:1.8 (MicroTechnics)
-            float digitH = totalH * 0.84f;
-            float digitW = Math.min(slotW * 0.70f, digitH * 0.52f);
-
-            float centerSlotU = (slotU1 + slotU2) * 0.5f;
-            float du1 = centerSlotU - (digitW * 0.5f);
-            float du2 = centerSlotU + (digitW * 0.5f);
-            float dv1 = v1 + (totalH - digitH) * 0.5f;
-            float dv2 = dv1 + digitH;
-
-            renderSingleSlantedDigit(pose, vc, face, facing, du1, dv1, du2, dv2, h,
-                    mask, slot.hasDot && active, onR, onG, onB, offR, offG, offB);
-        }
-    }
-
-    private static void renderSingleSlantedDigit(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                                float du1, float dv1, float du2, float dv2, float h,
-                                                byte mask, boolean dotActive,
-                                                int onR, int onG, int onB, int offR, int offG, int offB) {
-        float H = dv2 - dv1;
-        float W = du2 - du1;
-        float th = W * 0.18f;           // Segment thickness
-        float gap = th * 0.15f;          // Gap between segments
-        float slant = H * 0.11f;         // ~6.3 degree italic slant
-        float midV = (dv1 + dv2) * 0.5f;
-
-        // Slant function: shifts U to the right as V goes up towards dv1
-        class Slanted {
-            float su(float u, float v) {
-                return u + ((dv2 - v) / H) * slant;
-            }
-            void poly(float uA, float vA, float uB, float vB, float uC, float vC, float uD, float vD, boolean on) {
-                int r = on ? onR : offR;
-                int g = on ? onG : offG;
-                int b = on ? onB : offB;
-                renderFacePoly4(pose, vc, face, facing,
-                        su(uA, vA), vA,
-                        su(uB, vB), vB,
-                        su(uC, vC), vC,
-                        su(uD, vD), vD,
-                        h, r, g, b);
-            }
-        }
-        Slanted s = new Slanted();
-
-        // 1. Segment A (Top horizontal trapezoid)
-        s.poly(du1 + gap, dv1,
-               du2 - gap, dv1,
-               du2 - th - gap, dv1 + th,
-               du1 + th + gap, dv1 + th,
-               (mask & 0x01) != 0);
-
-        // 2. Segment B (Top-right vertical trapezoid)
-        s.poly(du2 - th, dv1 + th + gap,
-               du2, dv1 + gap,
-               du2, midV - gap,
-               du2 - th, midV - (th * 0.5f) - gap,
-               (mask & 0x02) != 0);
-
-        // 3. Segment C (Bottom-right vertical trapezoid)
-        s.poly(du2 - th, midV + (th * 0.5f) + gap,
-               du2, midV + gap,
-               du2, dv2 - gap,
-               du2 - th, dv2 - th - gap,
-               (mask & 0x04) != 0);
-
-        // 4. Segment D (Bottom horizontal trapezoid)
-        s.poly(du1 + th + gap, dv2 - th,
-               du2 - th - gap, dv2 - th,
-               du2 - gap, dv2,
-               du1 + gap, dv2,
-               (mask & 0x08) != 0);
-
-        // 5. Segment E (Bottom-left vertical trapezoid)
-        s.poly(du1, midV + gap,
-               du1 + th, midV + (th * 0.5f) + gap,
-               du1 + th, dv2 - th - gap,
-               du1, dv2 - gap,
-               (mask & 0x10) != 0);
-
-        // 6. Segment F (Top-left vertical trapezoid)
-        s.poly(du1, dv1 + gap,
-               du1 + th, dv1 + th + gap,
-               du1 + th, midV - (th * 0.5f) - gap,
-               du1, midV - gap,
-               (mask & 0x20) != 0);
-
-        // 7. Segment G (Middle horizontal hexagon split into 2 trapezoids)
-        boolean segG = (mask & 0x40) != 0;
-        // Upper half of hexagon
-        s.poly(du1 + gap, midV,
-               du1 + (th * 0.55f) + gap, midV - (th * 0.5f),
-               du2 - (th * 0.55f) - gap, midV - (th * 0.5f),
-               du2 - gap, midV,
-               segG);
-        // Lower half of hexagon
-        s.poly(du1 + gap, midV,
-               du2 - gap, midV,
-               du2 - (th * 0.55f) - gap, midV + (th * 0.5f),
-               du1 + (th * 0.55f) + gap, midV + (th * 0.5f),
-               segG);
-
-        // 8. Decimal Point (DP) at bottom right
-        float dpW = th * 0.85f;
-        float dpX1 = du2 + (gap * 2.5f);
-        float dpX2 = dpX1 + dpW;
-        float dpY1 = dv2 - dpW;
-        float dpY2 = dv2;
-        s.poly(dpX1, dpY1, dpX2, dpY1, dpX2, dpY2, dpX1, dpY2, dotActive);
-    }
-
-    private static byte getSegmentMask(char ch) {
-        ch = Character.toUpperCase(ch);
-        if (ch >= '0' && ch <= '9') return SEG_DIGITS[ch - '0'];
-        if (ch >= 'A' && ch <= 'F') return SEG_DIGITS[10 + (ch - 'A')];
-        if (ch == '-') return 0x40;
-        if (ch == '_') return 0x08;
-        return 0x00;
-    }
-
-    // ========================================================================
-    // In-World 3D Text Rendering via Font & PoseStack
-    // ========================================================================
-
-    private static void renderInWorldText(PoseStack poseStack, MultiBufferSource buffer, Font font,
-                                          AttachFace face, Direction facing,
-                                          float cu1, float cv1, float cu2, float cv2, float h,
-                                          String rawText, int textColor, boolean bold, float textScale) {
-        try {
-            if (!pl.asie.computronics.config.ComputronicsConfig.CLIENT.renderControlPanelWorldText.get()) return;
-        } catch (Throwable ignored) {}
-        if (rawText == null || rawText.trim().isEmpty()) return;
-
-        // Multi-line support: split by \n or \r\n (up to 4 lines)
-        String[] lines = rawText.split("\\r?\\n");
-        if (lines.length > 4) {
-            String[] trimmed = new String[4];
-            System.arraycopy(lines, 0, trimmed, 0, 4);
-            lines = trimmed;
-        }
-
-        float uMid = (cu1 + cu2) * 0.5f;
-        float vMid = (cv1 + cv2) * 0.5f;
-
-        float[] center = mapCoord(face, facing, uMid, vMid, h);
-
-        float maxLineWidth = 0;
-        for (String line : lines) {
-            maxLineWidth = Math.max(maxLineWidth, font.width(line));
-        }
-        if (maxLineWidth <= 0) return;
-
-        float boxW = (cu2 - cu1);
-        float boxH = (cv2 - cv1);
-
-        float lineHeight = 9.5f;
-        float totalTextHeight = lines.length * lineHeight;
-
-        float scale = 0.0035f * Math.max(0.2f, textScale);
-
-        // Keep multi-line text nicely contained inside bounds
-        float textWInWorld = maxLineWidth * scale;
-        float textHInWorld = totalTextHeight * scale;
-        if (textWInWorld > boxW * 0.90f) {
-            scale *= (boxW * 0.90f) / textWInWorld;
-        }
-        if (textHInWorld > boxH * 0.90f) {
-            scale *= (boxH * 0.90f) / textHInWorld;
-        }
-
-        poseStack.pushPose();
-        poseStack.translate(center[0], center[1], center[2]);
-
-        // Orient poseStack according to face and facing
-        if (face == AttachFace.FLOOR) {
-            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90.0f));
-            switch (facing) {
-                case NORTH -> {}
-                case SOUTH -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
-                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(90.0f));
-                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(270.0f));
-                default    -> {}
-            }
-        } else if (face == AttachFace.CEILING) {
-            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90.0f));
-            switch (facing) {
-                case NORTH -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(180.0f));
-                case SOUTH -> {}
-                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(270.0f));
-                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(90.0f));
-                default    -> {}
-            }
-        } else { // WALL
-            switch (facing) {
-                case SOUTH -> {} // Normal +Z (facing south into room)
-                case NORTH -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0f));
-                case WEST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(270.0f));
-                case EAST  -> poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(90.0f));
-                default    -> {}
-            }
-        }
-
-        // Standard Minecraft 3D font scaling: -scale flips Y for CCW upright glyphs
-        poseStack.scale(scale, -scale, scale);
-
-        float startY = - (lines.length * lineHeight) * 0.5f;
-
+    /** Text centered and scaled to fit the rectangle; '\n' separates lines. */
+    private void drawText(PoseStack pose, MultiBufferSource buffers, String text, int color,
+                          float x0, float y0, float x1, float y1, float w, int light) {
+        if (text == null || text.isEmpty()) return;
+        String[] lines = text.split("\n");
+        int maxWidth = 1;
+        for (String l : lines) maxWidth = Math.max(maxWidth, font.width(l));
+        float boxW = (x1 - x0) * 0.9f, boxH = (y1 - y0) * 0.9f;
+        float scale = Math.min(boxW / maxWidth, boxH / (lines.length * 10f));
+        scale = Math.min(scale, C / 9f * 1.2f); // never bigger than ~1 cell per line
+        pose.pushPose();
+        pose.translate((x0 + x1) / 2, (y0 + y1) / 2, w);
+        pose.scale(scale, scale, scale);
+        float top = -lines.length * 10 / 2f + 1;
         for (int i = 0; i < lines.length; i++) {
-            String line = lines[i];
-            float drawX = - font.width(line) * 0.5f;
-            float drawY = startY + i * lineHeight;
-
-            font.drawInBatch(
-                    line,
-                    drawX,
-                    drawY,
-                    textColor | 0xFF000000,
-                    false,
-                    poseStack.last().pose(),
-                    buffer,
-                    Font.DisplayMode.POLYGON_OFFSET,
-                    0,
-                    0x00F000F0
-            );
+            float lx = -font.width(lines[i]) / 2f;
+            font.drawInBatch(lines[i], lx, top + i * 10, 0xFF000000 | color, false, pose.last().pose(), buffers,
+                    Font.DisplayMode.POLYGON_OFFSET, 0, light);
         }
-
-        poseStack.popPose();
+        pose.popPose();
     }
 
-    // ========================================================================
-    // Geometric Helpers & Coordinate Mapping
-    // ========================================================================
-
-    private static void renderSurfaceBox(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                         float u1, float v1, float u2, float v2,
-                                         float h1, float h2, int r, int g, int b) {
-        // Top cap
-        renderFaceQuad(pose, vc, face, facing, u1, v1, u2, v2, h2, r, g, b);
-        // Sides
-        renderFaceQuadSide(pose, vc, face, facing, u1, v1, u2, v1, h1, h2, (int)(r * 0.85), (int)(g * 0.85), (int)(b * 0.85));
-        renderFaceQuadSide(pose, vc, face, facing, u1, v2, u2, v2, h1, h2, (int)(r * 0.80), (int)(g * 0.80), (int)(b * 0.80));
-        renderFaceQuadSide(pose, vc, face, facing, u1, v1, u1, v2, h1, h2, (int)(r * 0.90), (int)(g * 0.90), (int)(b * 0.90));
-        renderFaceQuadSide(pose, vc, face, facing, u2, v1, u2, v2, h1, h2, (int)(r * 0.75), (int)(g * 0.75), (int)(b * 0.75));
+    /** Raised box from height h0 to h1 (top face + 4 sides). */
+    private static void box(PoseStack pose, VertexConsumer vc, float x0, float y0, float x1, float y1, float h0, float h1, int color, int light) {
+        PoseStack.Pose p = pose.last();
+        int side = shade(color, 0.7f);
+        quad(pose, vc, x0, y0, x1, y1, h1, color, light);
+        // sides
+        vert(vc, p, x0, y0, h0, side, light, 0, -1, 0); vert(vc, p, x0, y0, h1, side, light, 0, -1, 0);
+        vert(vc, p, x1, y0, h1, side, light, 0, -1, 0); vert(vc, p, x1, y0, h0, side, light, 0, -1, 0);
+        vert(vc, p, x0, y1, h0, side, light, 0, 1, 0); vert(vc, p, x1, y1, h0, side, light, 0, 1, 0);
+        vert(vc, p, x1, y1, h1, side, light, 0, 1, 0); vert(vc, p, x0, y1, h1, side, light, 0, 1, 0);
+        vert(vc, p, x0, y0, h0, side, light, -1, 0, 0); vert(vc, p, x0, y1, h0, side, light, -1, 0, 0);
+        vert(vc, p, x0, y1, h1, side, light, -1, 0, 0); vert(vc, p, x0, y0, h1, side, light, -1, 0, 0);
+        vert(vc, p, x1, y0, h0, side, light, 1, 0, 0); vert(vc, p, x1, y0, h1, side, light, 1, 0, 0);
+        vert(vc, p, x1, y1, h1, side, light, 1, 0, 0); vert(vc, p, x1, y1, h0, side, light, 1, 0, 0);
     }
 
-    private static float[] mapCoord(AttachFace face, Direction facing, float u, float v, float h) {
-        float x, y, z;
-        if (face == AttachFace.FLOOR) {
-            y = 1.0f + h;
-            switch (facing) {
-                case NORTH -> { x = u; z = v; }
-                case SOUTH -> { x = 1.0f - u; z = 1.0f - v; }
-                case WEST  -> { x = v; z = 1.0f - u; }
-                case EAST  -> { x = 1.0f - v; z = u; }
-                default    -> { x = u; z = v; }
-            }
-        } else if (face == AttachFace.CEILING) {
-            y = 0.0f - h;
-            switch (facing) {
-                case NORTH -> { x = u; z = 1.0f - v; }
-                case SOUTH -> { x = 1.0f - u; z = v; }
-                case WEST  -> { x = v; z = u; }
-                case EAST  -> { x = 1.0f - v; z = 1.0f - u; }
-                default    -> { x = u; z = 1.0f - v; }
-            }
-        } else { // WALL
-            y = 1.0f - v;
-            switch (facing) {
-                case SOUTH -> { z = 1.0f + h; x = u; }
-                case NORTH -> { z = 0.0f - h; x = 1.0f - u; }
-                case WEST  -> { x = 0.0f - h; z = u; }
-                case EAST  -> { x = 1.0f + h; z = 1.0f - u; }
-                default    -> { z = 1.0f + h; x = u; }
-            }
-        }
-        return new float[]{x, y, z};
+    private static void quad(PoseStack pose, VertexConsumer vc, float x0, float y0, float x1, float y1, float h, int color, int light) {
+        PoseStack.Pose p = pose.last();
+        vert(vc, p, x0, y0, h, color, light, 0, 0, 1);
+        vert(vc, p, x0, y1, h, color, light, 0, 0, 1);
+        vert(vc, p, x1, y1, h, color, light, 0, 0, 1);
+        vert(vc, p, x1, y0, h, color, light, 0, 0, 1);
     }
 
-    private static void renderFacePoly4(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                        float uA, float vA, float uB, float vB,
-                                        float uC, float vC, float uD, float vD,
-                                        float h, int r, int g, int b) {
-        float[] p1 = mapCoord(face, facing, uA, vA, h);
-        float[] p2 = mapCoord(face, facing, uB, vB, h);
-        float[] p3 = mapCoord(face, facing, uC, vC, h);
-        float[] p4 = mapCoord(face, facing, uD, vD, h);
-
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
-
-        // Reverse winding
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
+    private static void vert(VertexConsumer vc, PoseStack.Pose p, float x, float y, float z, int color, int light, float nx, float ny, float nz) {
+        vc.addVertex(p, x, y, z)
+                .setColor((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, 255)
+                .setUv(0.5f, 0.5f)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(p, nx, ny, nz);
     }
 
-    private static void renderFaceQuad(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                       float u1, float v1, float u2, float v2, float h,
-                                       int r, int g, int b) {
-        renderFacePoly4(pose, vc, face, facing, u1, v1, u2, v1, u2, v2, u1, v2, h, r, g, b);
+    private static int shade(int c, float f) {
+        int r = (int) (((c >> 16) & 0xFF) * f), g = (int) (((c >> 8) & 0xFF) * f), b = (int) ((c & 0xFF) * f);
+        return (r << 16) | (g << 8) | b;
     }
 
-    private static void renderFaceQuadSide(Matrix4f pose, VertexConsumer vc, AttachFace face, Direction facing,
-                                           float u1, float v1, float u2, float v2, float h1, float h2,
-                                           int r, int g, int b) {
-        float[] p1 = mapCoord(face, facing, u1, v1, h1);
-        float[] p2 = mapCoord(face, facing, u2, v2, h1);
-        float[] p3 = mapCoord(face, facing, u2, v2, h2);
-        float[] p4 = mapCoord(face, facing, u1, v1, h2);
+    private static int contrast(int c) {
+        int lum = (((c >> 16) & 0xFF) * 299 + ((c >> 8) & 0xFF) * 587 + (c & 0xFF) * 114) / 1000;
+        return lum > 140 ? 0x101010 : 0xFFFFFF;
+    }
 
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
-
-        // Reverse winding
-        vc.addVertex(pose, p4[0], p4[1], p4[2]).setUv(0, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p3[0], p3[1], p3[2]).setUv(1, 1).setColor(r, g, b, 255);
-        vc.addVertex(pose, p2[0], p2[1], p2[2]).setUv(1, 0).setColor(r, g, b, 255);
-        vc.addVertex(pose, p1[0], p1[1], p1[2]).setUv(0, 0).setColor(r, g, b, 255);
+    @Override
+    public boolean shouldRenderOffScreen(TileControlPanel be) {
+        return false;
     }
 }

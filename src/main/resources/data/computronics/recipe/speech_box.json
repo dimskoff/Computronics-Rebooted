@@ -2,26 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "INI",
-    "RCR",
-    "III"
+    "IXI",
+    "1P1",
+    "IAI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "N": {
-      "item": "minecraft:jukebox"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "A": { "item": "opencomputers:audiocard1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "minecraft:note_block" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:speech_box"
-  }
+  "result": { "count": 1, "id": "computronics:speech_box" }
 }

@@ -34,6 +34,14 @@ public class TileEntityDetector extends TileEntityComputronics {
                 .create();
     }
 
+    private static int maxRange() {
+        try {
+            return Math.min(MAX_RANGE, pl.asie.computronics.config.ComputronicsServerConfig.SERVER.entityDetectorMaxRange.get());
+        } catch (Exception e) {
+            return MAX_RANGE;
+        }
+    }
+
     public Direction getFacing() {
         if (getBlockState().hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
             return getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
@@ -69,7 +77,7 @@ public class TileEntityDetector extends TileEntityComputronics {
             return;
         }
 
-        List<Entity> list = level.getEntities((Entity) null, getScanBox(scanRange));
+        List<Entity> list = level.getEntities((Entity) null, getScanBox(Math.min(scanRange, maxRange())));
         Set<UUID> current = new HashSet<>();
         double cx = pos.getX() + 0.5;
         double cy = pos.getY() + 0.5;
@@ -105,7 +113,7 @@ public class TileEntityDetector extends TileEntityComputronics {
 
     @Callback(doc = "function(range:number):number -- Sets default scanning range (1-32).")
     public Object[] setRange(Context context, Arguments args) {
-        this.scanRange = Math.max(1, Math.min(args.checkInteger(0), MAX_RANGE));
+        this.scanRange = Math.max(1, Math.min(args.checkInteger(0), maxRange()));
         setChanged();
         return new Object[]{scanRange};
     }
@@ -125,26 +133,26 @@ public class TileEntityDetector extends TileEntityComputronics {
         return new Object[]{signalEnabled};
     }
 
-    @Callback(direct = true, limit = 16, doc = "function([range:number]):number -- Gets total number of entities in front of the detector.")
+    @Callback(doc = "function([range:number]):number -- Gets total number of entities in front of the detector.")
     public Object[] count(Context context, Arguments args) {
         if (level == null) return new Object[]{0};
-        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), MAX_RANGE));
+        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), maxRange()));
         List<Entity> list = level.getEntities((Entity) null, getScanBox(range));
         return new Object[]{list.size()};
     }
 
-    @Callback(direct = true, limit = 16, doc = "function([range:number]):number -- Gets number of players in detection cone.")
+    @Callback(doc = "function([range:number]):number -- Gets number of players in detection cone.")
     public Object[] getPlayerCount(Context context, Arguments args) {
         if (level == null) return new Object[]{0};
-        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), MAX_RANGE));
+        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), maxRange()));
         List<Player> list = level.getEntitiesOfClass(Player.class, getScanBox(range));
         return new Object[]{list.size()};
     }
 
-    @Callback(direct = true, limit = 16, doc = "function([range:number]):boolean -- Checks if any player is in range.")
+    @Callback(doc = "function([range:number]):boolean -- Checks if any player is in range.")
     public Object[] isPlayerInRange(Context context, Arguments args) {
         if (level == null) return new Object[]{false};
-        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), MAX_RANGE));
+        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), maxRange()));
         List<Player> list = level.getEntitiesOfClass(Player.class, getScanBox(range));
         return new Object[]{!list.isEmpty()};
     }
@@ -153,7 +161,7 @@ public class TileEntityDetector extends TileEntityComputronics {
     public Object[] scan(Context context, Arguments args) {
         if (level == null) return new Object[]{null, "world unavailable"};
 
-        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), MAX_RANGE));
+        int range = Math.max(1, Math.min(args.optInteger(0, scanRange), maxRange()));
         List<Entity> entities = level.getEntities((Entity) null, getScanBox(range));
 
         List<Map<String, Object>> result = new ArrayList<>();
@@ -168,9 +176,11 @@ public class TileEntityDetector extends TileEntityComputronics {
             data.put("uuid", e.getStringUUID());
             data.put("name", e.getName().getString());
             data.put("type", BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString());
-            data.put("x", e.getX() - cx);
-            data.put("y", e.getY() - cy);
-            data.put("z", e.getZ() - cz);
+            if (pl.asie.computronics.config.ComputronicsServerConfig.SERVER.entityDetectorShowExactCoordinates.get()) {
+                data.put("x", e.getX() - cx);
+                data.put("y", e.getY() - cy);
+                data.put("z", e.getZ() - cz);
+            }
             data.put("distance", Math.sqrt(e.distanceToSqr(cx, cy, cz)));
             data.put("isPlayer", e instanceof Player);
 

@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import li.cil.oc.api.event.RackMountableRenderEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -35,13 +36,14 @@ public class RackMountableRenderer {
         ResourceLocation tex = null;
 
         if (item == ModItems.RACK_BOARD_LIGHT.get()) {
-            tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/light_board/mode_1");
+            tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/light_board/mode_" + readMode(readTag(event.data)));
         } else if (item == ModItems.RACK_BOARD_SWITCH.get()) {
             tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/switch_board");
         } else if (item == ModItems.RACK_BOARD_CAPACITOR.get()) {
             tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/rack_capacitor");
         } else if (item == ModItems.RACK_BOARD_BOOM.get()) {
-            tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/boom_board");
+            CompoundTag bt = readTag(event.data);
+            tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, bt != null && bt.contains("fuseTicks") && bt.getInt("fuseTicks") >= 0 ? "block/boom_board_ticking" : "block/boom_board");
         } else if (item == ModItems.RACK_BOARD_CO_PROCESSOR.get()) {
             tex = ResourceLocation.fromNamespaceAndPath(Computronics.MODID, "block/advanced/cipher_front");
         }
@@ -74,16 +76,12 @@ public class RackMountableRenderer {
     }
 
     private void renderLightBoard(RackMountableRenderEvent.BlockEntity e, PoseStack ps, MultiBufferSource buffer) {
-        VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.ROBOT_LIGHT);
+        VertexConsumer vc = buffer.getBuffer(RenderType.textBackground());
         Matrix4f pose = ps.last().pose();
 
-        CompoundTag tag = null;
-        if (e.data != null && e.data.has(DataComponents.CUSTOM_DATA)) {
-            CustomData cd = e.data.get(DataComponents.CUSTOM_DATA);
-            if (cd != null) tag = cd.copyTag();
-        }
+        CompoundTag tag = readTag(e.data);
 
-        int mode = (tag != null && tag.contains("mode")) ? Math.max(1, Math.min(5, tag.getInt("mode"))) : 1;
+        int mode = readMode(tag);
         int count = ItemRackLightBoard.getLightCount(mode);
         float vSpan = e.v1 - e.v0;
 
@@ -159,14 +157,10 @@ public class RackMountableRenderer {
     }
 
     private void renderSwitchBoard(RackMountableRenderEvent.BlockEntity e, PoseStack ps, MultiBufferSource buffer) {
-        VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.BLOCK_OVERLAY_COLOR);
+        VertexConsumer vc = buffer.getBuffer(RenderType.textBackground());
         Matrix4f pose = ps.last().pose();
 
-        CompoundTag tag = null;
-        if (e.data != null && e.data.has(DataComponents.CUSTOM_DATA)) {
-            CustomData cd = e.data.get(DataComponents.CUSTOM_DATA);
-            if (cd != null) tag = cd.copyTag();
-        }
+        CompoundTag tag = readTag(e.data);
 
         float vSpan = e.v1 - e.v0;
         for (int i = 0; i < 4; i++) {
@@ -190,9 +184,11 @@ public class RackMountableRenderer {
     }
 
     private void renderBoomBoard(RackMountableRenderEvent.BlockEntity e, PoseStack ps, MultiBufferSource buffer) {
-        VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.ROBOT_LIGHT);
+        VertexConsumer vc = buffer.getBuffer(RenderType.textBackground());
         Matrix4f pose = ps.last().pose();
 
+        CompoundTag tag = readTag(e.data);
+        if (tag == null || !tag.contains("fuseTicks") || tag.getInt("fuseTicks") < 0) return; // blink only while armed
         float vCenter = (e.v0 + e.v1) * 0.5f;
         float h = (e.v1 - e.v0) * 0.25f;
 
@@ -202,7 +198,7 @@ public class RackMountableRenderer {
     }
 
     private void renderCoProcessorBoard(RackMountableRenderEvent.BlockEntity e, PoseStack ps, MultiBufferSource buffer) {
-        VertexConsumer vc = buffer.getBuffer(li.cil.oc.client.renderer.RenderTypes.ROBOT_LIGHT);
+        VertexConsumer vc = buffer.getBuffer(RenderType.textBackground());
         Matrix4f pose = ps.last().pose();
 
         float vCenter = (e.v0 + e.v1) * 0.5f;
@@ -213,17 +209,28 @@ public class RackMountableRenderer {
         drawDoubleSidedQuad(pose, vc, 0.35f, vCenter - h, 0.65f, vCenter + h, -0.003f, 20, pulse, 255, 255);
     }
 
+    /** Reads the CUSTOM_DATA written by the rack board environments' describeForClient (keys: mode, c_N, a_N, switch_N, fuseTicks). */
+    private static CompoundTag readTag(net.minecraft.core.component.DataComponentHolder data) {
+        if (data == null) return null;
+        CustomData cd = data.get(DataComponents.CUSTOM_DATA);
+        return cd != null ? cd.copyTag() : null;
+    }
+
+    private static int readMode(CompoundTag tag) {
+        return (tag != null && tag.contains("mode")) ? Math.max(1, Math.min(5, tag.getInt("mode"))) : 1;
+    }
+
     private static void drawDoubleSidedQuad(Matrix4f pose, VertexConsumer vc,
                                            float u0, float v0, float u1, float v1, float z,
                                            int r, int g, int b, int a) {
-        vc.addVertex(pose, u0, v1, z).setUv(u0, v1).setColor(r, g, b, a);
-        vc.addVertex(pose, u1, v1, z).setUv(u1, v1).setColor(r, g, b, a);
-        vc.addVertex(pose, u1, v0, z).setUv(u1, v0).setColor(r, g, b, a);
-        vc.addVertex(pose, u0, v0, z).setUv(u0, v0).setColor(r, g, b, a);
+        vc.addVertex(pose, u0, v1, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u1, v1, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u1, v0, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u0, v0, z).setColor(r, g, b, a).setLight(0x00F000F0);
 
-        vc.addVertex(pose, u0, v0, z).setUv(u0, v0).setColor(r, g, b, a);
-        vc.addVertex(pose, u1, v0, z).setUv(u1, v0).setColor(r, g, b, a);
-        vc.addVertex(pose, u1, v1, z).setUv(u1, v1).setColor(r, g, b, a);
-        vc.addVertex(pose, u0, v1, z).setUv(u0, v1).setColor(r, g, b, a);
+        vc.addVertex(pose, u0, v0, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u1, v0, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u1, v1, z).setColor(r, g, b, a).setLight(0x00F000F0);
+        vc.addVertex(pose, u0, v1, z).setColor(r, g, b, a).setLight(0x00F000F0);
     }
 }

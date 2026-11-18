@@ -50,8 +50,12 @@ public class EnvironmentCameraUpgrade extends AbstractManagedEnvironment {
         Vec3 start = new Vec3(host.xPosition(), host.yPosition(), host.zPosition());
         Vec3 dir = getDirectionVector(yaw, pitch);
         Vec3 end = start.add(dir.scale(MAX_DISTANCE));
+        if (!level.isLoaded(net.minecraft.core.BlockPos.containing(end))) return new Object[]{null, "target area not loaded"};
+        // start the ray just outside the host's own block (robots would otherwise hit themselves)
+        double m = Math.max(Math.abs(dir.x), Math.max(Math.abs(dir.y), Math.abs(dir.z)));
+        Vec3 rayStart = start.add(dir.scale(0.5 / m + 1.0E-3));
 
-        BlockHitResult hit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
+        BlockHitResult hit = level.clip(new ClipContext(rayStart, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
         if (hit.getType() == HitResult.Type.BLOCK) {
             return new Object[]{start.distanceTo(hit.getLocation())};
         }
@@ -69,8 +73,12 @@ public class EnvironmentCameraUpgrade extends AbstractManagedEnvironment {
         Vec3 start = new Vec3(host.xPosition(), host.yPosition(), host.zPosition());
         Vec3 dir = getDirectionVector(yaw, pitch);
         Vec3 end = start.add(dir.scale(MAX_DISTANCE));
+        if (!level.isLoaded(net.minecraft.core.BlockPos.containing(end))) return new Object[]{null, "target area not loaded"};
+        // start the ray just outside the host's own block (robots would otherwise hit themselves)
+        double m = Math.max(Math.abs(dir.x), Math.max(Math.abs(dir.y), Math.abs(dir.z)));
+        Vec3 rayStart = start.add(dir.scale(0.5 / m + 1.0E-3));
 
-        BlockHitResult hit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
+        BlockHitResult hit = level.clip(new ClipContext(rayStart, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
         if (hit.getType() == HitResult.Type.BLOCK) {
             BlockPos targetPos = hit.getBlockPos();
             BlockState targetState = level.getBlockState(targetPos);

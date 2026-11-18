@@ -27,10 +27,7 @@
 !/computronics.lua
 !/relay_node.lua
 
-# APIs and dependencies
+# Compile/runtime dependency not available from a maven repo (needed by CI)
 !/libs
 /libs/*
-!/libs/APIs.zip
-!/libs/ic2classic-api.zip
-!/libs/asielib.jar
-
+!/libs/opencomputers-1.9.4-5.jar

@@ -66,7 +66,7 @@ public class TileIronNote extends TileEntityComputronics {
                 .create();
     }
 
-    @Callback(direct = true, limit = 10, doc = "function([instrument:number or string,] note:number [, volume:number]):boolean -- Plays the specified note.")
+    @Callback(doc = "function([instrument:number or string,] note:number [, volume:number]):boolean -- Plays the specified note.")
     public Object[] playNote(Context context, Arguments args) {
         if (level == null) return new Object[]{false, "world unavailable"};
 

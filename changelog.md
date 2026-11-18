@@ -1,3 +1,34 @@
+==== 2.0.0-beta.2 ====
+
+Big cleanup release: many features in beta.1 were stubs or broken. This one makes them real.
+
+  * FIXED: Tape drive plays audio (GitHub #1). There is a real DFPWM1a decoder and audio streams positionally over OpenAL.
+    Speed, volume, Records slider, fast tape I/O (no full-file rewrite per write), the head position is saved on the tape,
+    read() returns a single byte, write(number) works, the bundled `tape` program works.
+  * REWORKED: Control panel.
+    - Flush 4 px plate on floor/ceiling/wall. One shared coordinate system for rendering and clicking (no more mirrored/offset text).
+    - Components: button, switch, lamp, 7-segment display (1-4 digits), text label. Sizes chosen in hand (sneak + right-click in air).
+    - Screwdriver: right-click = settings (color, label, size, remove), sneak + right-click = resize, left-click = remove.
+    - Breaking the panel drops all components. Panels from beta.1 are migrated automatically.
+    - Lua: getComponents, getComponent, findComponent, get/setState, get/setColor, get/setLabel, get/setValue, press, reset.
+      Old beta.1 names still work. Signals: panel_button(addr, id, player, x, y), panel_switch(addr, id, state, player, x, y).
+    - Server validates every GUI packet (reach, permissions, lengths). At most one sync per tick.
+  * FIXED: Inductive charger energy math (charging was free / drained when full).
+  * FIXED: World access from OC "direct" callbacks on the wrong thread (entity detector, iron note block, weather station, beep, FX).
+  * FIXED: Chat box / chat upgrade honor range, dimension, cooldown and config. Names can't spoof players. Settings are saved.
+  * FIXED: Speech box is range limited, uses length/cooldown config, isProcessing/stop work.
+  * FIXED: RF jammer actually jams (chat boxes, laser links) and uses energy.
+  * FIXED: Laser transceiver no longer loads chunks while scanning. Forwarding loops are prevented.
+  * FIXED: Analog gauge syncs and renders.
+  * FIXED: Item environments and rack boards save their state (OC 1.9 data components). Rack board renderers show real state.
+  * REWORKED: Beep card plays real square-wave tones with durations (original `beep({[freq]=dur})` API).
+  * REWORKED: Self-destruct card / rack board, particle card, T3 network card (no address spoofing, size limit), packet sniffer.
+  * REWORKED: Drone winch (deploy/retract/grab/release really work). Rack capacitor uses config.
+  * FIXED: Pocket terminal screen actually shows text. Wireless endpoints no longer leak.
+  * CHANGED: Component names now match original Computronics: particle, self_destruct, server_destruct, rack_capacitor.
+  * CHANGED: Recipes use OpenComputers parts. Added missing recipes for the RF jammer card and speech upgrade.
+  * INTERNAL: Generic item driver instead of 12 copies, shared block bases, registration helpers, mods.toml from gradle,
+    removed 1.7.10/1.12 leftovers, GameTests + unit tests, CI builds and releases from tags.
 ==== 2.0.0-beta.1 ====
 
 Welcome to Computronics: Rebooted for Minecraft 1.21.1 NeoForge!

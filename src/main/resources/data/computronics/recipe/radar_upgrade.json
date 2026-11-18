@@ -2,20 +2,15 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " R ",
-    "IRI",
-    " R "
+    " X ",
+    "2P2",
+    " I "
   ],
   "key": {
-    "R": {
-      "item": "computronics:radar"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "2": { "item": "opencomputers:chip2" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "computronics:radar" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:radar_upgrade"
-  }
+  "result": { "count": 1, "id": "computronics:radar_upgrade" }
 }

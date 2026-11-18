@@ -4,26 +4,23 @@ import li.cil.oc.api.Network;
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
+import li.cil.oc.api.network.Node;
 import li.cil.oc.api.network.Visibility;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
+import pl.asie.computronics.config.ComputronicsServerConfig;
 import pl.asie.computronics.init.ModBlockEntities;
+import pl.asie.computronics.service.ChatService;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
-public class TileChatBox extends TileEntityComputronics {
-    public static final Set<TileChatBox> ACTIVE_CHAT_BOXES = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
-    private int distance = 64;
-    private String customPrefix = "[ChatBox]";
+public class TileChatBox extends TileEntityComputronics implements ChatService.Listener {
+    private final ChatService.ChatState chat = new ChatService.ChatState();
 
     public TileChatBox(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CHAT_BOX.get(), pos, state);
@@ -36,123 +33,113 @@ public class TileChatBox extends TileEntityComputronics {
     public void onLoad() {
         super.onLoad();
         if (level != null && !level.isClientSide) {
-            ACTIVE_CHAT_BOXES.add(this);
+            ChatService.addListener(this);
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        ACTIVE_CHAT_BOXES.remove(this);
+        ChatService.removeListener(this);
     }
 
     @Override
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
-        ACTIVE_CHAT_BOXES.remove(this);
+        ChatService.removeListener(this);
     }
 
-    @Callback(doc = "function(message:string[, distance:number, prefix:string]):boolean -- Broadcasts a chat message.")
+    // ChatService.Listener
+    @Override
+    public Level chatLevel() {
+        return level;
+    }
+
+    @Override
+    public Vec3 chatPosition() {
+        return Vec3.atCenterOf(worldPosition);
+    }
+
+    @Override
+    public ChatService.ChatState chatState() {
+        return chat;
+    }
+
+    @Override
+    public Node chatNode() {
+        return node;
+    }
+
+    private static boolean enabled() {
+        try {
+            return ComputronicsServerConfig.SERVER.enableChatBox.get();
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    @Callback(doc = "function(message:string[, distance:number]):boolean -- Broadcasts a chat message to players within range.")
     public Object[] say(Context context, Arguments args) {
-        if (!pl.asie.computronics.config.ComputronicsConfig.SERVER.enableChatBox.get()) {
+        if (!enabled()) {
             return result(false, "chat box is disabled in server config");
         }
-
         String message = args.checkString(0);
-        int maxDist = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxMaxDistance.get();
-        int range = args.optInteger(1, this.distance);
-        if (maxDist >= 0 && range > maxDist) {
-            range = maxDist;
-        }
-        boolean allowInterdim = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxAllowInterdimensional.get();
-        String defaultPrefix = pl.asie.computronics.config.ComputronicsConfig.SERVER.chatBoxDefaultPrefix.get();
-        String prefix = args.optString(2, this.customPrefix.equals("[ChatBox]") ? defaultPrefix : this.customPrefix);
-
-        if (level instanceof ServerLevel serverLevel) {
-            Component formatted = Component.literal(prefix + " ").withStyle(ChatFormatting.DARK_PURPLE)
-                    .append(Component.literal(message).withStyle(ChatFormatting.WHITE));
-
-            double x = getBlockPos().getX() + 0.5;
-            double y = getBlockPos().getY() + 0.5;
-            double z = getBlockPos().getZ() + 0.5;
-            double rangeSq = range * range;
-
-            for (ServerPlayer player : serverLevel.getServer().getPlayerList().getPlayers()) {
-                if (player.level() == level || allowInterdim) {
-                    if (range <= 0 || player.distanceToSqr(x, y, z) <= rangeSq) {
-                        player.sendSystemMessage(formatted);
-                    }
-                }
-            }
-            return result(true);
-        }
-        return result(false);
+        Integer dist = args.count() > 1 && (args.isInteger(1) || args.isDouble(1)) ? args.checkInteger(1) : null;
+        return ChatService.say(chat, level, chatPosition(), message, dist);
     }
 
-    @Callback(doc = "function(player:string, message:string[, prefix:string]):boolean -- Sends a private whisper to a player.")
+    @Callback(doc = "function(player:string, message:string):boolean -- Sends a private message to a player within range.")
     public Object[] tell(Context context, Arguments args) {
-        String targetName = args.checkString(0);
-        String message = args.checkString(1);
-        String prefix = args.optString(2, this.customPrefix);
-
-        if (level instanceof ServerLevel serverLevel) {
-            ServerPlayer player = serverLevel.getServer().getPlayerList().getPlayerByName(targetName);
-            if (player != null) {
-                Component formatted = Component.literal(prefix + " -> You: ").withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal(message).withStyle(ChatFormatting.ITALIC));
-                player.sendSystemMessage(formatted);
-                return result(true);
-            }
+        if (!enabled()) {
+            return result(false, "chat box is disabled in server config");
         }
-        return result(false, "Player not found");
+        return ChatService.tell(chat, level, chatPosition(), args.checkString(0), args.checkString(1));
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the default chat broadcast distance.")
+    @Callback(direct = true, doc = "function():number -- Gets the chat broadcast distance.")
     public Object[] getDistance(Context context, Arguments args) {
-        return result(distance);
+        int d = chat.getDistance();
+        return result(d == ChatService.UNLIMITED ? -1 : d);
     }
 
-    @Callback(doc = "function(distance:number):number -- Sets the default chat broadcast distance.")
+    @Callback(doc = "function(distance:number):number -- Sets the chat broadcast distance (clamped to the server maximum).")
     public Object[] setDistance(Context context, Arguments args) {
-        int newDist = args.checkInteger(0);
-        this.distance = Math.max(0, Math.min(newDist, 128));
-        return result(this.distance);
+        int d = chat.setDistance(args.checkInteger(0));
+        setChanged();
+        return result(d == ChatService.UNLIMITED ? -1 : d);
     }
 
-    @Callback(direct = true, doc = "function():string -- Gets the custom prefix name.")
+    @Callback(direct = true, doc = "function():string -- Gets the name shown in chat.")
     public Object[] getName(Context context, Arguments args) {
-        return result(customPrefix);
+        return result(chat.getName());
     }
 
-    @Callback(doc = "function(name:string):string -- Sets the custom prefix name.")
+    @Callback(doc = "function(name:string):string -- Sets the name shown in chat (max 32 chars, formatting codes removed).")
     public Object[] setName(Context context, Arguments args) {
-        this.customPrefix = args.checkString(0);
-        return result(customPrefix);
+        String n = chat.setName(args.checkString(0));
+        setChanged();
+        return result(n);
     }
 
-    public void onPlayerChat(ServerPlayer player, String message) {
-        if (node != null && level != null && player.level() == level) {
-            double dist = Math.sqrt(player.distanceToSqr(
-                    worldPosition.getX() + 0.5,
-                    worldPosition.getY() + 0.5,
-                    worldPosition.getZ() + 0.5
-            ));
-            if (distance <= 0 || dist <= distance) {
-                node.sendToReachable("computer.signal", "chat_message", player.getName().getString(), message, dist);
-            }
-        }
+    @Override
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        chat.save(tag);
     }
 
+    @Override
+    public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        chat.load(tag);
+    }
+
+    /** Registered on the NeoForge event bus by Computronics; dispatches to every chat listener. */
     public static class ChatEventHandler {
         public static final ChatEventHandler INSTANCE = new ChatEventHandler();
 
         @SubscribeEvent
         public void onServerChat(ServerChatEvent event) {
-            ServerPlayer player = event.getPlayer();
-            String rawMessage = event.getMessage().getString();
-            for (TileChatBox box : ACTIVE_CHAT_BOXES) {
-                box.onPlayerChat(player, rawMessage);
-            }
+            ChatService.onPlayerChat(event.getPlayer(), event.getRawText());
         }
     }
 }

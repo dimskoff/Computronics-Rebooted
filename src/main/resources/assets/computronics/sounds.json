@@ -15,10 +15,6 @@
     "category": "block",
     "sounds": ["computronics:tape_button"]
   },
-  "ticket_print": {
-    "category": "block",
-    "sounds": ["computronics:ticket_print"]
-  },
   "button_press": {
     "category": "block",
     "sounds": ["computronics:button_press"]

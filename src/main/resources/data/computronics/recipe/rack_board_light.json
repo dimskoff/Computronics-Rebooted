@@ -2,29 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "LGL",
-    "RCR",
+    "LYL",
+    "1P1",
     "III"
   ],
   "key": {
-    "L": {
-      "item": "minecraft:redstone_lamp"
-    },
-    "G": {
-      "item": "minecraft:glowstone"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "L": { "item": "minecraft:redstone_lamp" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "Y": { "item": "minecraft:glowstone" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:rack_board_light"
-  }
+  "result": { "count": 1, "id": "computronics:rack_board_light" }
 }

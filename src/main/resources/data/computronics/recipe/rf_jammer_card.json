@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "X2",
+    " B"
+  ],
+  "key": {
+    "2": { "item": "opencomputers:chip2" },
+    "B": { "item": "opencomputers:card" },
+    "X": { "item": "minecraft:lightning_rod" }
+  },
+  "result": { "count": 1, "id": "computronics:rf_jammer_card" }
+}

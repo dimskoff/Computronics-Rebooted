@@ -7,17 +7,19 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import pl.asie.computronics.item.ItemComputronics;
 
 import java.util.List;
 
-public class ItemRackLightBoard extends Item {
+public class ItemRackLightBoard extends ItemComputronics {
     public ItemRackLightBoard(Properties properties) {
-        super(properties.stacksTo(1));
+        super(properties,
+                line("tooltip.computronics.rack_board_light.desc1", ChatFormatting.GRAY),
+                line("tooltip.computronics.rack_board_light.hint", ChatFormatting.DARK_GRAY));
     }
 
     public static int getMode(ItemStack stack) {
@@ -64,7 +66,7 @@ public class ItemRackLightBoard extends Item {
             if (level.isClientSide()) {
                 player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.8f, 1.2f);
             } else {
-                player.displayClientMessage(Component.literal(String.format("§b[Light Board] §fMode: §e%s", getModeName(next))), true);
+                player.displayClientMessage(Component.translatable("tooltip.computronics.rack_board_light.mode", getModeName(next)).withStyle(ChatFormatting.AQUA), true);
             }
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
@@ -73,10 +75,7 @@ public class ItemRackLightBoard extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("tooltip.computronics.rack_board_light.mode", getModeName(getMode(stack))).withStyle(ChatFormatting.AQUA));
         super.appendHoverText(stack, context, tooltip, flag);
-        int mode = getMode(stack);
-        tooltip.add(Component.literal("Mode: " + getModeName(mode)).withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("tooltip.computronics.rack_board_light.desc1").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Shift + Right-Click in hand to cycle LED modes.").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

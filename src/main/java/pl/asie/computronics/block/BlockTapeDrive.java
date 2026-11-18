@@ -64,7 +64,7 @@ public class BlockTapeDrive extends BlockComputronics {
         if (!state.is(newState.getBlock())) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileTapeDrive tapeDrive && !tapeDrive.getTape().isEmpty()) {
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), tapeDrive.getTape());
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), tapeDrive.removeTape());
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);

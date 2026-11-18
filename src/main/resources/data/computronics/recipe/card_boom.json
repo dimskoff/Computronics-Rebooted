@@ -2,20 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "TRT",
-    "RTR",
-    "TRT"
+    "X1",
+    " B"
   ],
   "key": {
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "R": {
-      "item": "minecraft:redstone_torch"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "B": { "item": "opencomputers:card" },
+    "X": { "item": "minecraft:tnt" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:card_boom"
-  }
+  "result": { "count": 1, "id": "computronics:card_boom" }
 }

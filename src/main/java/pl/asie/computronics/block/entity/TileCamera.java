@@ -72,6 +72,7 @@ public class TileCamera extends TileEntityComputronics {
         );
         Vec3 dir = getDirectionVector(yaw, pitch);
         Vec3 end = start.add(dir.scale(MAX_DISTANCE));
+        if (!level.isLoaded(BlockPos.containing(end))) return result(null, "target area not loaded");
 
         BlockHitResult hit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
         if (hit.getType() == HitResult.Type.BLOCK) {
@@ -97,6 +98,7 @@ public class TileCamera extends TileEntityComputronics {
         );
         Vec3 dir = getDirectionVector(yaw, pitch);
         Vec3 end = start.add(dir.scale(MAX_DISTANCE));
+        if (!level.isLoaded(BlockPos.containing(end))) return result(null, "target area not loaded");
 
         BlockHitResult hit = level.clip(new ClipContext(start, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, (net.minecraft.world.entity.Entity) null));
         if (hit.getType() == HitResult.Type.BLOCK) {

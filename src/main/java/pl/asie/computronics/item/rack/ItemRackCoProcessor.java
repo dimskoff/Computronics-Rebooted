@@ -1,22 +1,12 @@
 package pl.asie.computronics.item.rack;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
+import pl.asie.computronics.item.ItemComputronics;
 
-import java.util.List;
-
-public class ItemRackCoProcessor extends Item {
+public class ItemRackCoProcessor extends ItemComputronics {
     public ItemRackCoProcessor(Properties properties) {
-        super(properties.stacksTo(1));
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.computronics.rack_board_co_processor.desc1").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.computronics.rack_board_co_processor.desc2").withStyle(ChatFormatting.DARK_GRAY));
+        super(properties,
+                line("tooltip.computronics.rack_board_co_processor.desc1", ChatFormatting.GRAY),
+                line("tooltip.computronics.rack_board_co_processor.desc2", ChatFormatting.DARK_GRAY));
     }
 }

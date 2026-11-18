@@ -2,29 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "IGI",
-    "RER",
-    "IBI"
+    "ISI",
+    "1E1",
+    "IPI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "G": {
-      "item": "minecraft:glass_pane"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "E": {
-      "item": "minecraft:ender_pearl"
-    },
-    "B": {
-      "item": "minecraft:stone_button"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "E": { "tag": "c:ender_pearls" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "S": { "item": "opencomputers:screen1" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:pocket_terminal"
-  }
+  "result": { "count": 1, "id": "computronics:pocket_terminal" }
 }

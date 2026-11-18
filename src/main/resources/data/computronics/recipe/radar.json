@@ -2,26 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "IDI",
-    "DED",
-    "IRI"
+    "IXI",
+    "2P2",
+    "IDI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "D": {
-      "item": "minecraft:diamond"
-    },
-    "E": {
-      "item": "minecraft:ender_eye"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "2": { "item": "opencomputers:chip2" },
+    "D": { "tag": "c:gems/diamond" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "minecraft:ender_eye" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:radar"
-  }
+  "result": { "count": 1, "id": "computronics:radar" }
 }

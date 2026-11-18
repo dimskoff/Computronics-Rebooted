@@ -25,51 +25,74 @@ public class TileWeatherStation extends TileEntityComputronics {
                 .create();
     }
 
-    @Callback(direct = true, doc = "function():boolean -- Checks if it is raining.")
+    @Callback(doc = "function():boolean -- Checks if it is raining.")
     public Object[] isRaining(Context context, Arguments args) {
         if (level == null) return result(false);
         return result(level.isRaining());
     }
 
-    @Callback(direct = true, doc = "function():boolean -- Checks if there is a thunderstorm.")
+    @Callback(doc = "function():boolean -- Checks if there is a thunderstorm.")
     public Object[] isThundering(Context context, Arguments args) {
         if (level == null) return result(false);
         return result(level.isThundering());
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the rain level (0.0 to 1.0).")
+    @Callback(doc = "function():number -- Gets the rain level (0.0 to 1.0).")
     public Object[] getRainStrength(Context context, Arguments args) {
         if (level == null) return result(0.0);
         return result((double) level.getRainLevel(1.0f));
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the thunder level (0.0 to 1.0).")
+    @Callback(doc = "function():number -- Gets the thunder level (0.0 to 1.0).")
     public Object[] getThunderStrength(Context context, Arguments args) {
         if (level == null) return result(0.0);
         return result((double) level.getThunderLevel(1.0f));
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the temperature at the station.")
+    @Callback(doc = "function():number -- Gets the temperature at the station.")
     public Object[] getTemperature(Context context, Arguments args) {
         if (level == null) return result(0.0);
         Holder<Biome> biome = level.getBiome(worldPosition);
-        return result((double) biome.value().getBaseTemperature());
+        return result((double) positionTemperature(biome.value(), worldPosition));
     }
 
-    @Callback(direct = true, doc = "function():boolean -- Checks if biome has precipitation.")
+    private static java.lang.reflect.Method tempMethod;
+    private static boolean tempMethodFailed;
+
+    /** Biome#getTemperature(BlockPos) is private in 1.21.1; call it reflectively, fall back to an approximation. */
+    private static float positionTemperature(Biome biome, BlockPos pos) {
+        if (!tempMethodFailed) {
+            try {
+                if (tempMethod == null) {
+                    tempMethod = Biome.class.getDeclaredMethod("getTemperature", BlockPos.class);
+                    tempMethod.setAccessible(true);
+                }
+                return (Float) tempMethod.invoke(biome, pos);
+            } catch (Throwable t) {
+                tempMethodFailed = true;
+            }
+        }
+        float t = biome.getBaseTemperature();
+        if (pos.getY() > 80) {
+            t -= (pos.getY() - 80) * 0.05f / 40.0f;
+        }
+        return t;
+    }
+
+    @Callback(doc = "function():boolean -- Checks if biome has precipitation.")
     public Object[] hasPrecipitation(Context context, Arguments args) {
         if (level == null) return result(false);
         Holder<Biome> biome = level.getBiome(worldPosition);
         return result(biome.value().hasPrecipitation());
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the current light level.")
+    @Callback(doc = "function():number -- Gets the current light level.")
     public Object[] getLightLevel(Context context, Arguments args) {
         if (level == null) return result(0);
         return result(level.getMaxLocalRawBrightness(worldPosition.above()));
     }
 
-    @Callback(direct = true, doc = "function():number -- Gets the lunar phase (0-7).")
+    @Callback(doc = "function():number -- Gets the lunar phase (0-7).")
     public Object[] getMoonPhase(Context context, Arguments args) {
         if (level == null) return result(0);
         return result(level.getMoonPhase());

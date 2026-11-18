@@ -48,6 +48,8 @@ public class Computronics {
         // Register game event listeners
         NeoForge.EVENT_BUS.register(TileChatBox.ChatEventHandler.INSTANCE);
         NeoForge.EVENT_BUS.addListener(this::serverStarting);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.level.LevelEvent.Save e) -> pl.asie.computronics.tape.TapeStorage.saveAll());
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> pl.asie.computronics.tape.TapeStorage.shutdown());
         NeoForge.EVENT_BUS.addListener(this::onLeftClickBlock);
     }
 
@@ -56,8 +58,13 @@ public class Computronics {
             net.minecraft.world.level.block.state.BlockState state = event.getLevel().getBlockState(event.getPos());
             if (state.getBlock() instanceof pl.asie.computronics.block.BlockControlPanel) {
                 event.setCanceled(true);
-                if (!event.getLevel().isClientSide()) {
-                    pl.asie.computronics.block.BlockControlPanel.dismantleAt(event.getLevel(), event.getPos(), state, event.getEntity());
+                // the server fires this for START, STOP and ABORT; act once per click
+                if (!event.getLevel().isClientSide()
+                        && event.getAction() == net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock.Action.START) {
+                    net.minecraft.world.phys.HitResult hit = event.getEntity().pick(event.getEntity().blockInteractionRange(), 1.0f, false);
+                    if (hit instanceof net.minecraft.world.phys.BlockHitResult bhr && bhr.getBlockPos().equals(event.getPos())) {
+                        pl.asie.computronics.block.BlockControlPanel.dismantle(event.getLevel(), event.getPos(), event.getEntity(), bhr.getLocation(), bhr.getDirection());
+                    }
                 }
             }
         }

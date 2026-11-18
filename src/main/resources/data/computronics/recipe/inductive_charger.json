@@ -3,22 +3,15 @@
   "category": "misc",
   "pattern": [
     "CCC",
-    "CRC",
-    "III"
+    "UHU",
+    "IPI"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_block"
-    },
-    "R": {
-      "item": "minecraft:redstone_block"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "C": { "tag": "c:ingots/copper" },
+    "H": { "item": "opencomputers:charger" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "U": { "item": "opencomputers:capacitor" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:inductive_charger"
-  }
+  "result": { "count": 1, "id": "computronics:inductive_charger" }
 }

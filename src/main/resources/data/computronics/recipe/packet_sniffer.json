@@ -2,23 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "RCR",
-    "CQC",
-    "RCR"
+    "Q2Q",
+    " W "
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "Q": {
-      "item": "minecraft:quartz"
-    }
+    "2": { "item": "opencomputers:chip2" },
+    "Q": { "tag": "c:gems/quartz" },
+    "W": { "item": "opencomputers:lancard" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:packet_sniffer"
-  }
+  "result": { "count": 1, "id": "computronics:packet_sniffer" }
 }

@@ -71,11 +71,21 @@ public class ItemTape extends Item {
         if (label != null && !label.isEmpty()) {
             tooltip.add(Component.literal("\"" + label + "\"").withStyle(ChatFormatting.YELLOW));
         }
-        int kb = capacity / 1024;
-        if (kb >= 1024) {
-            tooltip.add(Component.translatable("tooltip.computronics.tape.capacity", (kb / 1024) + " MB").withStyle(ChatFormatting.GRAY));
-        } else {
-            tooltip.add(Component.translatable("tooltip.computronics.tape.capacity", kb + " KB").withStyle(ChatFormatting.GRAY));
-        }
+        tooltip.add(Component.translatable("tooltip.computronics.tape.capacity", formatSize(capacity)).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.computronics.tape.length", formatDuration(capacity)).withStyle(ChatFormatting.DARK_GRAY));
+    }
+
+    /** DFPWM at the default 32768 Hz sample rate stores 1 bit per sample = 4096 bytes per second. */
+    public static final int BYTES_PER_SECOND = 4096;
+
+    public static String formatSize(int bytes) {
+        int kb = bytes / 1024;
+        return kb >= 1024 ? (kb / 1024) + " MB" : kb + " KB";
+    }
+
+    /** Playback time of {@code bytes} of DFPWM audio at {@link #BYTES_PER_SECOND}, formatted as m:ss. */
+    public static String formatDuration(int bytes) {
+        int seconds = bytes / BYTES_PER_SECOND;
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 }

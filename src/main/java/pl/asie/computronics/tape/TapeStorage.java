@@ -2,113 +2,111 @@ package pl.asie.computronics.tape;
 
 import pl.asie.computronics.Computronics;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class TapeStorage {
+/**
+ * Raw byte storage of one tape, backed by {@code <world>/computronics/tapes/tape_<id>.bin}.
+ * <p>
+ * The head position is NOT stored here (it belongs to the tape item / drive). Writes only mark the
+ * tape dirty; data is flushed by {@link #saveAll()} on world save and server stop, instead of
+ * rewriting up to 16 MB of file on every {@code write()} call.
+ */
+public final class TapeStorage {
     private static final Map<String, TapeStorage> CACHE = new ConcurrentHashMap<>();
-    private static Path storageDirectory = null;
+    private static volatile Path storageDirectory;
 
     private final String id;
-    private final int capacity;
-    private byte[] data;
-    private int position = 0;
-    private boolean dirty = false;
+    private final byte[] data;
+    private boolean dirty;
 
     public static void setStorageDirectory(Path path) {
         storageDirectory = path;
     }
 
     public static TapeStorage get(String id, int capacity) {
-        if (id == null) return null;
+        if (id == null || id.isEmpty() || storageDirectory == null) return null;
         return CACHE.computeIfAbsent(id, k -> new TapeStorage(k, capacity));
+    }
+
+    /** Flushes every dirty tape to disk. */
+    public static void saveAll() {
+        CACHE.values().forEach(TapeStorage::save);
+    }
+
+    /** Flushes and forgets everything (server stopped / world switched). */
+    public static void shutdown() {
+        saveAll();
+        CACHE.clear();
+        storageDirectory = null;
     }
 
     private TapeStorage(String id, int capacity) {
         this.id = id;
-        this.capacity = capacity;
-        this.data = new byte[capacity];
-        load();
+        byte[] loaded = load(file(id));
+        // never truncate an existing tape if the configured capacity shrank
+        this.data = new byte[Math.max(capacity, loaded != null ? loaded.length : 0)];
+        if (loaded != null) System.arraycopy(loaded, 0, data, 0, loaded.length);
     }
 
     public int getCapacity() {
-        return capacity;
+        return data.length;
     }
 
-    public int getPosition() {
-        return position;
+    /** Reads up to {@code length} bytes at {@code position}. */
+    public synchronized byte[] read(int position, int length) {
+        if (position < 0 || position >= data.length || length <= 0) return new byte[0];
+        int n = Math.min(length, data.length - position);
+        byte[] out = new byte[n];
+        System.arraycopy(data, position, out, 0, n);
+        return out;
     }
 
-    public int seek(int offset) {
-        int target = position + offset;
-        if (target < 0) target = 0;
-        if (target > capacity) target = capacity;
-        int diff = target - position;
-        position = target;
-        return diff;
+    public synchronized int readByte(int position) {
+        if (position < 0 || position >= data.length) return -1;
+        return data[position] & 0xFF;
     }
 
-    public void setPosition(int newPos) {
-        if (newPos < 0) newPos = 0;
-        if (newPos > capacity) newPos = capacity;
-        this.position = newPos;
-    }
-
-    public synchronized byte[] read(int length) {
-        if (position >= capacity || length <= 0) {
-            return new byte[0];
-        }
-        int available = Math.min(length, capacity - position);
-        byte[] result = new byte[available];
-        System.arraycopy(data, position, result, 0, available);
-        position += available;
-        return result;
-    }
-
-    public synchronized int write(byte[] bytes) {
-        if (position >= capacity || bytes == null || bytes.length == 0) {
-            return 0;
-        }
-        int toWrite = Math.min(bytes.length, capacity - position);
-        System.arraycopy(bytes, 0, data, position, toWrite);
-        position += toWrite;
-        dirty = true;
-        save();
-        return toWrite;
-    }
-
-    private static Path getDirectory() {
-        if (storageDirectory != null) return storageDirectory;
-        return Path.of("computronics", "tapes");
-    }
-
-    private void load() {
-        Path dir = getDirectory();
-        Path file = dir.resolve("tape_" + id + ".bin");
-        if (Files.exists(file)) {
-            try {
-                byte[] loaded = Files.readAllBytes(file);
-                int copyLen = Math.min(loaded.length, capacity);
-                System.arraycopy(loaded, 0, data, 0, copyLen);
-            } catch (IOException e) {
-                Computronics.LOGGER.error("Failed to load tape storage for ID " + id, e);
-            }
-        }
+    /** Writes bytes at {@code position}, returns how many fit. */
+    public synchronized int write(int position, byte[] bytes) {
+        if (bytes == null || position < 0 || position >= data.length) return 0;
+        int n = Math.min(bytes.length, data.length - position);
+        System.arraycopy(bytes, 0, data, position, n);
+        if (n > 0) dirty = true;
+        return n;
     }
 
     public synchronized void save() {
-        if (!dirty) return;
-        Path dir = getDirectory();
+        if (!dirty || storageDirectory == null) return;
+        Path target = file(id);
         try {
-            Files.createDirectories(dir);
-            Path file = dir.resolve("tape_" + id + ".bin");
-            Files.write(file, data);
+            Files.createDirectories(target.getParent());
+            Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
+            Files.write(tmp, data);
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             dirty = false;
         } catch (IOException e) {
-            Computronics.LOGGER.error("Failed to save tape storage for ID " + id, e);
+            Computronics.LOGGER.error("Failed to save tape {}", id, e);
+        }
+    }
+
+    private static Path file(String id) {
+        // ids are UUIDs we generate; sanitize anyway so a crafted item can't escape the folder
+        String safe = id.replaceAll("[^A-Za-z0-9-]", "_");
+        return storageDirectory.resolve("tape_" + safe + ".bin");
+    }
+
+    private static byte[] load(Path file) {
+        if (!Files.exists(file)) return null;
+        try {
+            return Files.readAllBytes(file);
+        } catch (IOException e) {
+            Computronics.LOGGER.error("Failed to load tape {}", file, e);
+            return null;
         }
     }
 }

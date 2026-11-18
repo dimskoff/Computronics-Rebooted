@@ -2,26 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    "III",
-    "DCD",
-    "IRI"
+    "IXI",
+    "1P1",
+    "IYI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "D": {
-      "item": "minecraft:daylight_detector"
-    },
-    "C": {
-      "item": "minecraft:clock"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "minecraft:daylight_detector" },
+    "Y": { "item": "minecraft:clock" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:weather_station"
-  }
+  "result": { "count": 1, "id": "computronics:weather_station" }
 }

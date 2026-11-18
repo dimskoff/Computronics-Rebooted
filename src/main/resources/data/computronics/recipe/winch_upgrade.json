@@ -2,23 +2,16 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "pattern": [
-    " S ",
-    "SPS",
-    " I "
+    " L ",
+    "1P1",
+    "SIS"
   ],
   "key": {
-    "S": {
-      "item": "minecraft:string"
-    },
-    "P": {
-      "item": "minecraft:piston"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "L": { "item": "minecraft:lead" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "S": { "tag": "c:strings" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:winch_upgrade"
-  }
+  "result": { "count": 1, "id": "computronics:winch_upgrade" }
 }

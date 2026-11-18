@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " X ",
+    "1P1",
+    " I "
+  ],
+  "key": {
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "P": { "item": "opencomputers:printedcircuitboard" },
+    "X": { "item": "computronics:speech_box" }
+  },
+  "result": { "count": 1, "id": "computronics:speech_upgrade" }
+}

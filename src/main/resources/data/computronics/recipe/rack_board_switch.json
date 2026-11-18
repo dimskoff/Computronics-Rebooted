@@ -3,25 +3,14 @@
   "category": "misc",
   "pattern": [
     "LLL",
-    "RCR",
+    "1P1",
     "III"
   ],
   "key": {
-    "L": {
-      "item": "minecraft:lever"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "1": { "item": "opencomputers:chip1" },
+    "I": { "tag": "c:ingots/iron" },
+    "L": { "item": "minecraft:lever" },
+    "P": { "item": "opencomputers:printedcircuitboard" }
   },
-  "result": {
-    "count": 1,
-    "id": "computronics:rack_board_switch"
-  }
+  "result": { "count": 1, "id": "computronics:rack_board_switch" }
 }
