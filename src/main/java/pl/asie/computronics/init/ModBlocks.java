@@ -51,5 +51,6 @@ public final class ModBlocks {
     public static final DeferredBlock<BlockIronNote> IRON_NOTEBLOCK = machine("iron_noteblock", BlockIronNote::new);
     public static final DeferredBlock<BlockControlPanel> CONTROL_PANEL = machine("control_panel", BlockControlPanel::new);
     public static final DeferredBlock<BlockSpeechBox> SPEECH_BOX = machine("speech_box", BlockSpeechBox::new);
+    public static final DeferredBlock<BlockConnector> CONNECTOR = machine("connector", BlockConnector::new);
     public static final DeferredBlock<BlockEntityDetector> ENTITY_DETECTOR = machine("entity_detector", BlockEntityDetector::new);
 }

@@ -1,0 +1,1 @@
+{ "parent": "minecraft:block/cube", "textures": { "up": "computronics:block/connector_top", "down": "computronics:block/connector_bottom", "north": "computronics:block/connector_side", "south": "computronics:block/connector_side", "east": "computronics:block/connector_side", "west": "computronics:block/connector_side", "particle": "computronics:block/connector_side" } }

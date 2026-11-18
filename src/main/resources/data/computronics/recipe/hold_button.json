@@ -1,0 +1,1 @@
+{ "type": "minecraft:crafting_shapeless", "category": "redstone", "ingredients": [ { "item": "computronics:mini_button" }, { "item": "minecraft:slime_ball" } ], "result": { "count": 1, "id": "computronics:hold_button" } }

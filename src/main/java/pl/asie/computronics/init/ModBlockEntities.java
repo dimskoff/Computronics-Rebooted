@@ -52,6 +52,8 @@ public final class ModBlockEntities {
             register("control_panel", TileControlPanel::new, ModBlocks.CONTROL_PANEL);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileSpeechBox>> SPEECH_BOX =
             register("speech_box", TileSpeechBox::new, ModBlocks.SPEECH_BOX);
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileConnector>> CONNECTOR =
+            register("connector", TileConnector::new, ModBlocks.CONNECTOR);
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TileEntityDetector>> ENTITY_DETECTOR =
             register("entity_detector", TileEntityDetector::new, ModBlocks.ENTITY_DETECTOR);
 }

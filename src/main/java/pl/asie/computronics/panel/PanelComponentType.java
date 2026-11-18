@@ -13,6 +13,8 @@ import java.util.function.Supplier;
 public enum PanelComponentType {
     /** Momentary push button, fires {@code panel_button}. */
     BUTTON(0xCC2020, 4, 4, true, () -> ModItems.MINI_BUTTON.get()),
+    /** Push button that stays pressed while the player holds right-click, fires {@code panel_hold}. */
+    HOLD_BUTTON(0xE08020, 4, 4, true, () -> ModItems.HOLD_BUTTON.get()),
     /** Toggle switch, fires {@code panel_switch}. */
     SWITCH(0xD0D0D0, 4, 4, true, () -> ModItems.TOGGLE_SWITCH.get()),
     /** Indicator lamp driven by the computer. */
@@ -51,6 +53,20 @@ public enum PanelComponentType {
 
     public boolean hasLabel() {
         return this != SEGMENT;
+    }
+
+    /** Has a signal output on the back of the panel (wire to a connector input). */
+    public boolean hasOutputPort() {
+        return this == BUTTON || this == HOLD_BUTTON || this == SWITCH;
+    }
+
+    /** Has a signal input on the back of the panel (wire from a connector output). */
+    public boolean hasInputPort() {
+        return this == LAMP || this == SEGMENT;
+    }
+
+    public boolean isButton() {
+        return this == BUTTON || this == HOLD_BUTTON;
     }
 
     public boolean hasState() {

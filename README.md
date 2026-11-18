@@ -61,3 +61,7 @@ tape play / tape stop / tape rewind
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+## Credits
+
+Signal wire and connector textures are based on [Redstone Control](https://github.com/CD4017BE/RedstoneControl) by CD4017BE, MIT License.

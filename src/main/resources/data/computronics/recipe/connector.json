@@ -1,0 +1,1 @@
+{ "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": [ "IRI", "CPC", "IRI" ], "key": { "I": { "item": "minecraft:iron_ingot" }, "R": { "item": "minecraft:redstone" }, "C": { "item": "opencomputers:cable" }, "P": { "item": "opencomputers:chip1" } }, "result": { "count": 1, "id": "computronics:connector" } }

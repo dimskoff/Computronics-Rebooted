@@ -61,10 +61,7 @@ public class Computronics {
                 // the server fires this for START, STOP and ABORT; act once per click
                 if (!event.getLevel().isClientSide()
                         && event.getAction() == net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.LeftClickBlock.Action.START) {
-                    net.minecraft.world.phys.HitResult hit = event.getEntity().pick(event.getEntity().blockInteractionRange(), 1.0f, false);
-                    if (hit instanceof net.minecraft.world.phys.BlockHitResult bhr && bhr.getBlockPos().equals(event.getPos())) {
-                        pl.asie.computronics.block.BlockControlPanel.dismantle(event.getLevel(), event.getPos(), event.getEntity(), bhr.getLocation(), bhr.getDirection());
-                    }
+                    pl.asie.computronics.block.BlockControlPanel.dismantle(event.getLevel(), event.getPos(), event.getEntity());
                 }
             }
         }
@@ -117,6 +114,7 @@ public class Computronics {
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.CONTROL_PANEL.get());
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.SPEECH_BOX.get());
             registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.ENTITY_DETECTOR.get());
+            registerBlockCaps(event, envCap, sidedCap, ModBlockEntities.CONNECTOR.get());
             LOGGER.info("Computronics: OpenComputers block capabilities registered successfully.");
         } catch (Throwable t) {
             LOGGER.warn("Computronics: Could not register OpenComputers capabilities: {}", t.getMessage());

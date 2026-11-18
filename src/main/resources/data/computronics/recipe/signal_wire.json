@@ -1,0 +1,1 @@
+{ "type": "minecraft:crafting_shaped", "category": "redstone", "pattern": [ "SRS" ], "key": { "S": { "item": "minecraft:string" }, "R": { "item": "minecraft:redstone" } }, "result": { "count": 8, "id": "computronics:signal_wire" } }

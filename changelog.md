@@ -1,3 +1,17 @@
+==== 2.0.0-beta.3 ====
+
+  * ADDED: Signal wiring, inspired by Redstone Control.
+    - Signal Connector block: 8 inputs on top (green), 8 outputs on the bottom (red), connects to OpenComputers by cable.
+      Lua (component "connector"): getInput(n), getInputs(), setOutput(n, value|bool), getOutput(n), isWired(n).
+      Signal: connector_input(addr, port, value).
+    - Signal Wire item: click a port, then a port of the other kind. Sneak-click unplugs. Max 16 blocks, drawn as cables that glow while on.
+    - Control panel components now have ports on the back of the plate: buttons/switches = outputs, lamps/displays = inputs.
+  * ADDED: Hold Button: stays pressed while you hold right-click. Signal panel_hold(addr, id, true/false, player, x, y).
+  * CHANGED: Control panel placement works like a slab: the plate can sit at 4 heights inside the block
+    (floor default = top, sneak-place = other side) and can be tilted 0/22.5/45 degrees.
+    Screwdriver right-click on an empty spot of the panel opens these settings.
+  * FIXED: Broken-looking panel model (the plate is now rendered from the panel's real geometry).
+  * Textures of the signal wire and connector ports are based on Redstone Control by CD4017BE (MIT).
 ==== 2.0.0-beta.2 ====
 
 Big cleanup release: many features in beta.1 were stubs or broken. This one makes them real.

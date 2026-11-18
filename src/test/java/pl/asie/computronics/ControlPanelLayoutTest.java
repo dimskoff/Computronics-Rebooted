@@ -99,6 +99,46 @@ public class ControlPanelLayoutTest {
     }
 
     @Test
+    public void tiltedAndRaisedPlatesStayInsideBlockAndAreClickable() {
+        for (AttachFace face : AttachFace.values()) {
+            for (Direction d : Direction.Plane.HORIZONTAL) {
+                for (int off = 0; off < PanelOrientation.OFFSETS; off++) {
+                    for (int tilt = 0; tilt < PanelOrientation.TILTS.length; tilt++) {
+                        PanelOrientation o = PanelOrientation.of(face, d, off, tilt);
+                        String id = face + "/" + d + "/" + off + "/" + tilt;
+                        Assertions.assertTrue(o.u.cross(o.v).dot(o.w) < -0.99, id);
+                        // every corner of the plate is inside the block
+                        for (double pu : new double[]{0, 1}) for (double pv : new double[]{0, 1}) for (double pw : new double[]{0, -PanelOrientation.THICKNESS}) {
+                            Vec3 p = o.toBlock(pu, pv, pw);
+                            Assertions.assertTrue(p.x > -1e-6 && p.x < 1 + 1e-6 && p.y > -1e-6 && p.y < 1 + 1e-6 && p.z > -1e-6 && p.z < 1 + 1e-6, id + " corner " + p);
+                        }
+                        // a ray from the viewer's side through the centre of cell (6, 2) hits that cell
+                        Vec3 target = o.toBlock(PanelOrientation.MARGIN + 6.5 * PanelOrientation.CELL, PanelOrientation.MARGIN + 2.5 * PanelOrientation.CELL, 0);
+                        Vec3 eye = target.add(o.w.scale(1.5)).add(o.v.scale(0.4));
+                        double[] uv = o.raycast(eye, target.subtract(eye).normalize(), false);
+                        Assertions.assertNotNull(uv, id);
+                        Assertions.assertArrayEquals(new int[]{6, 2}, PanelOrientation.cellOf(uv[0], uv[1]), id);
+                        // the same ray does not count as a click on the back
+                        Assertions.assertNull(o.raycast(eye, target.subtract(eye).normalize(), true), id);
+                        // from behind, the back face is hit
+                        Vec3 back = o.toBlock(0.5, 0.5, -PanelOrientation.THICKNESS);
+                        Vec3 eyeB = back.subtract(o.w.scale(1.2));
+                        Assertions.assertNotNull(o.raycast(eyeB, back.subtract(eyeB).normalize(), true), id);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void floorTopOffsetSitsAtTheTopOfTheBlock() {
+        PanelOrientation o = PanelOrientation.of(AttachFace.FLOOR, Direction.NORTH, PanelOrientation.OFFSETS - 1, 0);
+        Assertions.assertEquals(1.0, o.origin.y, 1e-6);
+        PanelOrientation flush = PanelOrientation.of(AttachFace.FLOOR, Direction.NORTH, 0, 0);
+        Assertions.assertEquals(PanelOrientation.THICKNESS, flush.origin.y, 1e-6);
+    }
+
+    @Test
     public void wallPanelTextReadsLeftToRight() {
         // wall panel facing south: viewer stands south looking north, so "right" is east (+x)
         PanelOrientation o = PanelOrientation.of(AttachFace.WALL, Direction.SOUTH);

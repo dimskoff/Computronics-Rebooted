@@ -23,6 +23,7 @@ public class ComputronicsClient {
     public static void onRegisterRenderers(net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.CONTROL_PANEL.get(), ControlPanelRenderer::new);
         event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.TAPE_DRIVE.get(), TapeDriveRenderer::new);
+        event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.CONNECTOR.get(), ConnectorRenderer::new);
         event.registerBlockEntityRenderer(pl.asie.computronics.init.ModBlockEntities.ANALOG_GAUGE.get(), pl.asie.computronics.client.peripheral.AnalogGaugeRenderer::new);
     }
 
@@ -34,6 +35,7 @@ public class ComputronicsClient {
                 NeoForge.EVENT_BUS.register(ComputronicsClient.class);
                 NeoForge.EVENT_BUS.register(pl.asie.computronics.client.audio.ClientAudioManager.INSTANCE);
                 pl.asie.computronics.util.SidedHooks.setPanelConfigOpener(pl.asie.computronics.client.gui.ControlPanelConfigScreen::open);
+                pl.asie.computronics.util.SidedHooks.setPanelGeometryOpener(pl.asie.computronics.client.gui.PanelGeometryScreen::open);
 
                 Manual.addProvider(new ResourceContentProvider("computronics", "doc/"));
                 Manual.addTab(
@@ -131,21 +133,34 @@ public class ComputronicsClient {
     }
 
 
-    /** Screwdriver HUD: shows id / type / size of the component under the cursor. */
+    /** HUD hints: screwdriver shows the component under the cursor, the wire shows the port and its value. */
     @net.neoforged.bus.api.SubscribeEvent
     public static void onClientTick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        if (!(mc.player.getMainHandItem().getItem() instanceof ItemScrewdriver)) return;
         if (!(mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult bhr)) return;
-        if (!(mc.level.getBlockEntity(bhr.getBlockPos()) instanceof pl.asie.computronics.block.entity.TileControlPanel panel)) return;
-        int[] cell = pl.asie.computronics.block.BlockControlPanel.cellAt(panel.getBlockState(), bhr.getBlockPos(), bhr.getLocation(), bhr.getDirection());
-        if (cell == null) return;
-        pl.asie.computronics.panel.PanelComponent c = panel.layout().at(cell[0], cell[1]);
-        net.minecraft.network.chat.Component msg = c == null
-                ? net.minecraft.network.chat.Component.translatable("message.computronics.panel.hud_empty", cell[0] + 1, cell[1] + 1)
-                : net.minecraft.network.chat.Component.translatable("message.computronics.panel.hud",
-                        c.id(), net.minecraft.network.chat.Component.translatable(c.type.translationKey()), c.width, c.height);
-        mc.player.displayClientMessage(msg, true);
+        net.minecraft.world.item.Item held = mc.player.getMainHandItem().getItem();
+        net.minecraft.world.level.block.entity.BlockEntity be = mc.level.getBlockEntity(bhr.getBlockPos());
+        net.minecraft.network.chat.Component msg = null;
+
+        if (held instanceof ItemScrewdriver && be instanceof pl.asie.computronics.block.entity.TileControlPanel panel) {
+            int[] cell = pl.asie.computronics.block.BlockControlPanel.cellLookedAt(panel, mc.player);
+            if (cell == null) return;
+            pl.asie.computronics.panel.PanelComponent c = panel.layout().at(cell[0], cell[1]);
+            msg = c == null
+                    ? net.minecraft.network.chat.Component.translatable("message.computronics.panel.hud_empty", cell[0] + 1, cell[1] + 1)
+                    : net.minecraft.network.chat.Component.translatable("message.computronics.panel.hud",
+                            c.id(), net.minecraft.network.chat.Component.translatable(c.type.translationKey()), c.width, c.height);
+        } else if (held instanceof pl.asie.computronics.item.ItemSignalWire && be instanceof pl.asie.computronics.signal.ISignalNode node) {
+            pl.asie.computronics.signal.ISignalNode.PortRef ref = node.pickPort(mc.player, bhr.getLocation());
+            if (ref == null) return;
+            int value = ref.output() ? node.getOutput(ref.port())
+                    : (be instanceof pl.asie.computronics.block.entity.TileConnector con ? con.input(ref.port())
+                    : be instanceof pl.asie.computronics.block.entity.TileControlPanel p && p.layout().byId(ref.port()) != null
+                    ? p.layout().byId(ref.port()).input : 0);
+            msg = net.minecraft.network.chat.Component.translatable("message.computronics.wire.hud", node.describePort(ref), value)
+                    .withStyle(ref.output() ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.GREEN);
+        }
+        if (msg != null) mc.player.displayClientMessage(msg, true);
     }
 }

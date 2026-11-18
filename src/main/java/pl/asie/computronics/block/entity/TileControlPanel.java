@@ -8,37 +8,59 @@ import li.cil.oc.api.network.Visibility;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import pl.asie.computronics.init.ModBlockEntities;
+import pl.asie.computronics.init.ModItems;
 import pl.asie.computronics.init.ModSounds;
 import pl.asie.computronics.panel.PanelComponent;
 import pl.asie.computronics.panel.PanelComponentType;
 import pl.asie.computronics.panel.PanelLayout;
+import pl.asie.computronics.panel.PanelOrientation;
+import pl.asie.computronics.signal.ISignalNode;
+import pl.asie.computronics.signal.SignalLink;
+import pl.asie.computronics.signal.SignalSource;
+import pl.asie.computronics.signal.Signals;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Control panel block entity: owns a {@link PanelLayout}, exposes it to OpenComputers as the
- * {@code control_panel} component and fires {@code panel_button} / {@code panel_switch} signals.
- * <p>
- * Changes (from players or Lua) only mark the panel dirty; the server tick pushes at most one
- * block-entity update per tick to clients.
+ * Control panel block entity.
+ * <ul>
+ *   <li>Owns a {@link PanelLayout} and the plate geometry (height offset + tilt).</li>
+ *   <li>OpenComputers component {@code control_panel}; fires {@code panel_button}, {@code panel_hold}, {@code panel_switch}.</li>
+ *   <li>Signal ports on the back of the plate: buttons/switches are outputs, lamps/displays are inputs.
+ *       Port number = component id.</li>
+ * </ul>
+ * Changes only mark the panel dirty; the server tick pushes at most one update per tick to clients.
  */
-public class TileControlPanel extends TileEntityComputronics {
+public class TileControlPanel extends TileEntityComputronics implements ISignalNode {
     public static final int PRESS_TICKS = 6;
+    public static final int HOLD_GRACE_TICKS = 5;
 
     private final PanelLayout layout = new PanelLayout();
+    private final List<SignalLink> links = new ArrayList<>();
+    private final Map<Integer, SignalSource> sources = new HashMap<>();
+    /** last value sent on each output port, to only propagate changes */
+    private final Map<Integer, Integer> sentOutputs = new HashMap<>();
+    private final Map<Integer, String> holders = new HashMap<>();
+    private int offset;
+    private int tilt;
     private volatile boolean syncPending;
+    private PanelOrientation orientationCache;
 
     public TileControlPanel(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CONTROL_PANEL.get(), pos, state);
@@ -51,9 +73,39 @@ public class TileControlPanel extends TileEntityComputronics {
         return layout;
     }
 
+    public int offset() {
+        return offset;
+    }
+
+    public int tilt() {
+        return tilt;
+    }
+
+    public PanelOrientation orientation() {
+        PanelOrientation o = orientationCache;
+        if (o == null) orientationCache = o = PanelOrientation.of(getBlockState(), offset, tilt);
+        return o;
+    }
+
+    @Override
+    public void setBlockState(BlockState state) {
+        super.setBlockState(state);
+        orientationCache = null;
+    }
+
+    public void setGeometry(int offset, int tilt) {
+        this.offset = Math.max(0, Math.min(PanelOrientation.OFFSETS - 1, offset));
+        this.tilt = Math.max(0, Math.min(PanelOrientation.TILTS.length - 1, tilt));
+        orientationCache = null;
+        markDirtyAndSync();
+    }
+
+    public boolean isWired(int inPort) {
+        return sources.containsKey(inPort);
+    }
+
     // ------------------------------------------------------------------ server-side operations
 
-    /** Mounts a component from an item. Returns the component or null if it doesn't fit. */
     public PanelComponent mount(PanelComponentType type, int cx, int cy, int size) {
         int[] fp = type.footprint(size);
         PanelComponent c = layout.place(type, cx, cy, fp[0], fp[1]);
@@ -64,22 +116,41 @@ public class TileControlPanel extends TileEntityComputronics {
         return c;
     }
 
-    /** Removes a component and returns the item it was made from. */
-    public ItemStack dismount(PanelComponent c) {
-        if (!layout.remove(c)) return ItemStack.EMPTY;
-        playSound(SoundEvents.ITEM_FRAME_REMOVE_ITEM, 1.1f);
-        markDirtyAndSync();
-        return new ItemStack(c.type.item());
-    }
-
-    public List<ItemStack> dismountAll() {
+    /** Removes a component, unplugs its wire and returns the items to give back. */
+    public List<ItemStack> dismount(PanelComponent c) {
         List<ItemStack> drops = new ArrayList<>();
-        for (PanelComponent c : layout.clear()) drops.add(new ItemStack(c.type.item()));
+        if (!layout.remove(c)) return drops;
+        drops.add(new ItemStack(c.type.item()));
+        int wires = unplug(c);
+        if (wires > 0) drops.add(new ItemStack(ModItems.SIGNAL_WIRE.get(), wires));
+        playSound(SoundEvents.ITEM_FRAME_REMOVE_ITEM, 1.1f);
         markDirtyAndSync();
         return drops;
     }
 
-    /** A player (or Lua via press()) activates a component. */
+    private int unplug(PanelComponent c) {
+        if (level == null || level.isClientSide) return 0;
+        int n = 0;
+        if (c.type.hasOutputPort()) n += Signals.disconnectOutput(level, getBlockPos(), c.id());
+        if (c.type.hasInputPort() && Signals.disconnectInput(level, getBlockPos(), c.id())) n++;
+        sentOutputs.remove(c.id());
+        return n;
+    }
+
+    /** Everything that should drop when the panel is broken: components + unplugged wires. */
+    public List<ItemStack> dismountAll() {
+        List<ItemStack> drops = new ArrayList<>();
+        int wires = 0;
+        for (PanelComponent c : layout.snapshot()) {
+            wires += unplug(c);
+        }
+        for (PanelComponent c : layout.clear()) drops.add(new ItemStack(c.type.item()));
+        if (wires > 0) drops.add(new ItemStack(ModItems.SIGNAL_WIRE.get(), wires));
+        markDirtyAndSync();
+        return drops;
+    }
+
+    /** A player (or Lua via press()) clicks a component. */
     public boolean activate(PanelComponent c, String who) {
         switch (c.type) {
             case BUTTON -> {
@@ -87,6 +158,7 @@ public class TileControlPanel extends TileEntityComputronics {
                 playSound(ModSounds.BUTTON_PRESS.get(), 1.0f);
                 signal("panel_button", c.id(), who, c.x + 1, c.y + 1);
             }
+            case HOLD_BUTTON -> hold(c, who);
             case SWITCH -> {
                 c.state = !c.state;
                 playSound(SoundEvents.LEVER_CLICK, c.state ? 0.75f : 0.6f);
@@ -100,7 +172,19 @@ public class TileControlPanel extends TileEntityComputronics {
         return true;
     }
 
-    /** Applies settings from the screwdriver GUI (already validated by the caller). */
+    /** Hold button: keeps it pressed while the client keeps sending hold packets. */
+    public void hold(PanelComponent c, String who) {
+        if (c.type != PanelComponentType.HOLD_BUTTON) return;
+        boolean wasDown = gameTime() < c.pressedUntil;
+        c.pressedUntil = gameTime() + HOLD_GRACE_TICKS;
+        if (!wasDown) {
+            holders.put(c.id(), who);
+            playSound(ModSounds.BUTTON_PRESS.get(), 0.9f);
+            signal("panel_hold", c.id(), true, who, c.x + 1, c.y + 1);
+            markDirtyAndSync();
+        }
+    }
+
     public void configure(PanelComponent c, int color, String label, int width, int height) {
         c.color = color & 0xFFFFFF;
         if (c.type.hasLabel()) c.label = label;
@@ -117,7 +201,7 @@ public class TileControlPanel extends TileEntityComputronics {
         }
     }
 
-    private void playSound(net.minecraft.sounds.SoundEvent sound, float pitch) {
+    private void playSound(SoundEvent sound, float pitch) {
         if (level != null && !level.isClientSide) {
             level.playSound(null, getBlockPos(), sound, SoundSource.BLOCKS, 0.6f, pitch);
         }
@@ -134,11 +218,128 @@ public class TileControlPanel extends TileEntityComputronics {
     @Override
     public void tickServer(Level level, BlockPos pos, BlockState state) {
         super.tickServer(level, pos, state);
+        long now = level.getGameTime();
+
+        // button releases + output propagation (only on change, full refresh every second)
+        boolean refresh = now % 20 == (pos.hashCode() & 15);
+        for (PanelComponent c : layout.snapshot()) {
+            if (!c.type.hasOutputPort()) continue;
+            int value = outputOf(c, now);
+            Integer last = sentOutputs.get(c.id());
+            if (last == null || last != value || refresh) {
+                if (c.type == PanelComponentType.HOLD_BUTTON && last != null && last > 0 && value == 0) {
+                    String who = holders.remove(c.id());
+                    signal("panel_hold", c.id(), false, who == null ? "" : who, c.x + 1, c.y + 1);
+                    playSound(ModSounds.BUTTON_RELEASE.get(), 1.0f);
+                    syncPending = true;
+                } else if (c.type == PanelComponentType.BUTTON && last != null && last > 0 && value == 0) {
+                    syncPending = true;
+                }
+                sentOutputs.put(c.id(), value);
+                Signals.propagate(level, this, c.id());
+            }
+        }
+        if (refresh && Signals.pruneDeadLinks(level, this)) syncPending = true;
+
         if (syncPending) {
             syncPending = false;
             setChanged();
-            level.sendBlockUpdated(pos, state, state, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            level.sendBlockUpdated(pos, state, state, Block.UPDATE_CLIENTS);
         }
+    }
+
+    private int outputOf(PanelComponent c, long now) {
+        return switch (c.type) {
+            case BUTTON, HOLD_BUTTON -> now < c.pressedUntil ? Signals.ON : 0;
+            case SWITCH -> c.state ? Signals.ON : 0;
+            default -> 0;
+        };
+    }
+
+    // ------------------------------------------------------------------ ISignalNode
+
+    @Override
+    public @Nullable PortRef pickPort(Player player, Vec3 hitLocation) {
+        BlockPos p = getBlockPos();
+        Vec3 eye = player.getEyePosition().subtract(p.getX(), p.getY(), p.getZ());
+        double[] uv = orientation().raycast(eye, player.getViewVector(1f), true);
+        if (uv == null) return null;
+        int[] cell = PanelOrientation.cellOf(uv[0], uv[1]);
+        if (cell == null) return null;
+        PanelComponent c = layout.at(cell[0], cell[1]);
+        if (c == null) return null;
+        if (c.type.hasOutputPort()) return new PortRef(c.id(), true);
+        if (c.type.hasInputPort()) return new PortRef(c.id(), false);
+        return null;
+    }
+
+    @Override
+    public boolean hasPort(int port, boolean output) {
+        PanelComponent c = layout.byId(port);
+        return c != null && (output ? c.type.hasOutputPort() : c.type.hasInputPort());
+    }
+
+    @Override
+    public Vec3 portPosition(int port, boolean output) {
+        PanelComponent c = layout.byId(port);
+        BlockPos p = getBlockPos();
+        double cu = 0.5, cv = 0.5;
+        if (c != null) {
+            cu = PanelOrientation.MARGIN + (c.x + c.width / 2.0) * PanelOrientation.CELL;
+            cv = PanelOrientation.MARGIN + (c.y + c.height / 2.0) * PanelOrientation.CELL;
+        }
+        return orientation().toBlock(cu, cv, -PanelOrientation.THICKNESS - 0.02).add(p.getX(), p.getY(), p.getZ());
+    }
+
+    @Override
+    public int getOutput(int port) {
+        PanelComponent c = layout.byId(port);
+        return c == null ? 0 : outputOf(c, gameTime());
+    }
+
+    @Override
+    public void setInput(int port, int value) {
+        PanelComponent c = layout.byId(port);
+        if (c != null && c.type.hasInputPort() && c.input != value) {
+            c.input = value;
+            markDirtyAndSync();
+        }
+    }
+
+    @Override
+    public List<SignalLink> links() {
+        return links;
+    }
+
+    @Override
+    public @Nullable SignalSource sourceOf(int inPort) {
+        return sources.get(inPort);
+    }
+
+    @Override
+    public void setSource(int inPort, @Nullable SignalSource source) {
+        if (source == null) sources.remove(inPort);
+        else sources.put(inPort, source);
+    }
+
+    @Override
+    public void markSignalDirty() {
+        markDirtyAndSync();
+    }
+
+    @Override
+    public String describePort(PortRef ref) {
+        return (ref.output() ? "OUT #" : "IN #") + ref.port();
+    }
+
+    /** Called by the block when it is broken: unplug wires that end here. */
+    public int unplugIncoming() {
+        if (level == null) return 0;
+        int n = 0;
+        for (Integer port : new ArrayList<>(sources.keySet())) {
+            if (Signals.disconnectInput(level, getBlockPos(), port)) n++;
+        }
+        return n;
     }
 
     // ------------------------------------------------------------------ Lua API
@@ -154,7 +355,7 @@ public class TileControlPanel extends TileEntityComputronics {
         throw new IllegalArgumentException("not supported by " + c.type.id());
     }
 
-    @Callback(direct = true, doc = "function():table -- Returns a list of all components: {id, type, x, y, width, height, color, label, state, value, pressed}.")
+    @Callback(direct = true, doc = "function():table -- Returns a list of all components: {id, type, x, y, width, height, color, label, state, value, input, pressed}.")
     public Object[] getComponents(Context context, Arguments args) {
         long t = gameTime();
         List<Map<String, Object>> list = new ArrayList<>();
@@ -177,8 +378,9 @@ public class TileControlPanel extends TileEntityComputronics {
     @Callback(direct = true, doc = "function(id:number):boolean -- Lamp lit / switch on / button currently pressed.")
     public Object[] getState(Context context, Arguments args) {
         PanelComponent c = component(args, 0);
-        if (c.type == PanelComponentType.BUTTON) return new Object[]{gameTime() < c.pressedUntil};
-        return new Object[]{require(c, PanelComponentType.LAMP, PanelComponentType.SWITCH).state};
+        if (c.type.isButton()) return new Object[]{gameTime() < c.pressedUntil};
+        if (c.type == PanelComponentType.LAMP) return new Object[]{c.lit()};
+        return new Object[]{require(c, PanelComponentType.SWITCH).state};
     }
 
     @Callback(direct = true, limit = 64, doc = "function(id:number, state:boolean) -- Turns a lamp on/off or flips a switch.")
@@ -210,12 +412,15 @@ public class TileControlPanel extends TileEntityComputronics {
 
     @Callback(direct = true, doc = "function(id:number):string -- Returns the label text.")
     public Object[] getLabel(Context context, Arguments args) {
-        return new Object[]{require(component(args, 0), PanelComponentType.BUTTON, PanelComponentType.SWITCH, PanelComponentType.LAMP, PanelComponentType.LABEL).label};
+        PanelComponent c = component(args, 0);
+        if (!c.type.hasLabel()) throw new IllegalArgumentException("not supported by " + c.type.id());
+        return new Object[]{c.label};
     }
 
     @Callback(direct = true, limit = 32, doc = "function(id:number, text:string) -- Sets the label text (use \\n for line breaks).")
     public Object[] setLabel(Context context, Arguments args) {
-        PanelComponent c = require(component(args, 0), PanelComponentType.BUTTON, PanelComponentType.SWITCH, PanelComponentType.LAMP, PanelComponentType.LABEL);
+        PanelComponent c = component(args, 0);
+        if (!c.type.hasLabel()) throw new IllegalArgumentException("not supported by " + c.type.id());
         String s = args.checkString(1).replace("§", "");
         if (s.length() > PanelComponent.MAX_LABEL) s = s.substring(0, PanelComponent.MAX_LABEL);
         if (!s.equals(c.label)) {
@@ -227,10 +432,11 @@ public class TileControlPanel extends TileEntityComputronics {
 
     @Callback(direct = true, doc = "function(id:number):string -- Returns the text shown on a seven-segment display.")
     public Object[] getValue(Context context, Arguments args) {
-        return new Object[]{require(component(args, 0), PanelComponentType.SEGMENT).value};
+        PanelComponent c = require(component(args, 0), PanelComponentType.SEGMENT);
+        return new Object[]{c.shownValue(isWired(c.id()))};
     }
 
-    @Callback(direct = true, limit = 64, doc = "function(id:number, value:number or string) -- Shows a value on a seven-segment display (0-9, A-F, -, space, '.').")
+    @Callback(direct = true, limit = 64, doc = "function(id:number, value:number or string) -- Shows a value on a seven-segment display (0-9, A-F, -, space, '.'). Ignored while a wire drives the display.")
     public Object[] setValue(Context context, Arguments args) {
         PanelComponent c = require(component(args, 0), PanelComponentType.SEGMENT);
         String s;
@@ -246,6 +452,11 @@ public class TileControlPanel extends TileEntityComputronics {
             markDirtyAndSync();
         }
         return new Object[]{true};
+    }
+
+    @Callback(direct = true, doc = "function(id:number):number -- Signal arriving on a lamp/display input port (0 if not wired).")
+    public Object[] getInput(Context context, Arguments args) {
+        return new Object[]{require(component(args, 0), PanelComponentType.LAMP, PanelComponentType.SEGMENT).input};
     }
 
     @Callback(doc = "function(id:number):boolean -- Presses a button or flips a switch as if a player did it (fires the signal).")
@@ -290,33 +501,58 @@ public class TileControlPanel extends TileEntityComputronics {
     @Override
     public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.put("components", layout.save());
+        writeShared(tag);
     }
 
     @Override
     public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        readLayout(tag);
+        readShared(tag);
     }
 
-    private void readLayout(CompoundTag tag) {
+    private void writeShared(CompoundTag tag) {
+        tag.put("components", layout.save());
+        tag.putByte("offset", (byte) offset);
+        tag.putByte("tilt", (byte) tilt);
+        ListTag l = new ListTag();
+        for (SignalLink link : links) l.add(link.save());
+        tag.put("links", l);
+        ListTag s = new ListTag();
+        for (Map.Entry<Integer, SignalSource> e : sources.entrySet()) {
+            CompoundTag t = e.getValue().save();
+            t.putInt("port", e.getKey());
+            s.add(t);
+        }
+        tag.put("sources", s);
+    }
+
+    private void readShared(CompoundTag tag) {
         if (tag.contains("components", Tag.TAG_LIST)) {
             layout.load(tag.getList("components", Tag.TAG_COMPOUND));
         } else if (tag.contains("elements", Tag.TAG_LIST)) {
             layout.loadLegacy(tag.getList("elements", Tag.TAG_COMPOUND));
+        }
+        offset = tag.getByte("offset");
+        tilt = tag.getByte("tilt");
+        orientationCache = null;
+        links.clear();
+        for (Tag t : tag.getList("links", Tag.TAG_COMPOUND)) links.add(SignalLink.load((CompoundTag) t));
+        sources.clear();
+        for (Tag t : tag.getList("sources", Tag.TAG_COMPOUND)) {
+            sources.put(((CompoundTag) t).getInt("port"), SignalSource.load((CompoundTag) t));
         }
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        tag.put("components", layout.save());
+        writeShared(tag);
         return tag;
     }
 
     @Override
     public void handleUpdateTag(CompoundTag tag, HolderLookup.Provider registries) {
-        readLayout(tag);
+        readShared(tag);
     }
 
     @Override
@@ -326,6 +562,6 @@ public class TileControlPanel extends TileEntityComputronics {
 
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt, HolderLookup.Provider registries) {
-        readLayout(pkt.getTag());
+        readShared(pkt.getTag());
     }
 }

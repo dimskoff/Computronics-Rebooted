@@ -35,7 +35,10 @@ public class ModCreativeTabs {
 
                         // 2. Modular Panel Elements & Tools
                         output.accept(ModItems.SCREWDRIVER.get());
+                        output.accept(ModBlocks.CONNECTOR.get());
+                        output.accept(ModItems.SIGNAL_WIRE.get());
                         output.accept(ModItems.MINI_BUTTON.get());
+                        output.accept(ModItems.HOLD_BUTTON.get());
                         output.accept(ModItems.TOGGLE_SWITCH.get());
                         output.accept(ModItems.MINI_LAMP.get());
                         output.accept(ModItems.SEVEN_SEGMENT.get());

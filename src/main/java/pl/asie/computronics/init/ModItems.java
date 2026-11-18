@@ -53,6 +53,7 @@ public final class ModItems {
     public static final DeferredItem<BlockItem> CONTROL_PANEL = blockItem(ModBlocks.CONTROL_PANEL);
     public static final DeferredItem<BlockItem> SPEECH_BOX = blockItem(ModBlocks.SPEECH_BOX);
     public static final DeferredItem<BlockItem> ENTITY_DETECTOR = blockItem(ModBlocks.ENTITY_DETECTOR);
+    public static final DeferredItem<BlockItem> CONNECTOR = blockItem(ModBlocks.CONNECTOR);
 
     // Handheld Terminals
     public static final DeferredItem<ItemPocketTerminal> POCKET_TERMINAL = item("pocket_terminal", ItemPocketTerminal::new, Rarity.RARE);
@@ -63,6 +64,8 @@ public final class ModItems {
     public static final DeferredItem<ItemToggleSwitch> TOGGLE_SWITCH = item("toggle_switch", ItemToggleSwitch::new);
     public static final DeferredItem<ItemSevenSegment> SEVEN_SEGMENT = item("seven_segment", ItemSevenSegment::new);
     public static final DeferredItem<ItemPanelText> PANEL_TEXT = item("panel_text", ItemPanelText::new);
+    public static final DeferredItem<ItemHoldButton> HOLD_BUTTON = item("hold_button", ItemHoldButton::new);
+    public static final DeferredItem<ItemSignalWire> SIGNAL_WIRE = item("signal_wire", ItemSignalWire::new);
     public static final DeferredItem<ItemScrewdriver> SCREWDRIVER = item("screwdriver", ItemScrewdriver::new);
 
     // Server Rack Mountable Boards

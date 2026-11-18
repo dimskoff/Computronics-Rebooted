@@ -24,6 +24,8 @@ public final class PanelComponent {
     public boolean state;
     /** seven-segment text */
     public String value = "";
+    /** value arriving on the input port (lamps, displays) from a wire */
+    public int input;
     /** game time until which a button is drawn pressed */
     public long pressedUntil;
 
@@ -45,6 +47,16 @@ public final class PanelComponent {
         return cx >= x && cy >= y && cx < x + width && cy < y + height;
     }
 
+    /** Lamp lit by Lua or by its wire. */
+    public boolean lit() {
+        return state || input > 0;
+    }
+
+    /** What a display shows: its wire input if one is plugged in, else the Lua value. */
+    public String shownValue(boolean wired) {
+        return wired ? Integer.toString(input) : value;
+    }
+
     public int digits() {
         return Math.max(1, width / 2);
     }
@@ -61,6 +73,7 @@ public final class PanelComponent {
         if (state) t.putBoolean("state", true);
         if (!value.isEmpty()) t.putString("value", value);
         if (pressedUntil != 0) t.putLong("pressed", pressedUntil);
+        if (input != 0) t.putInt("in", input);
         return t;
     }
 
@@ -74,6 +87,7 @@ public final class PanelComponent {
         c.state = t.getBoolean("state");
         c.value = clip(t.getString("value"), MAX_VALUE);
         c.pressedUntil = t.getLong("pressed");
+        c.input = t.getInt("in");
         return c;
     }
 
@@ -89,7 +103,8 @@ public final class PanelComponent {
         m.put("color", color);
         if (type.hasLabel()) m.put("label", label);
         if (type.hasState()) m.put("state", state);
-        if (type == PanelComponentType.BUTTON) m.put("pressed", gameTime < pressedUntil);
+        if (type.isButton()) m.put("pressed", gameTime < pressedUntil);
+        if (type.hasInputPort()) m.put("input", input);
         if (type == PanelComponentType.SEGMENT) {
             m.put("value", value);
             m.put("digits", digits());

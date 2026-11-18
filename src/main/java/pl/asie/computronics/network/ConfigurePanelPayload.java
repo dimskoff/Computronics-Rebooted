@@ -55,8 +55,9 @@ public record ConfigurePanelPayload(BlockPos pos, int id, int color, String labe
             if (c == null) return;
 
             if (p.remove()) {
-                net.minecraft.world.item.ItemStack drop = panel.dismount(c);
-                if (!player.getAbilities().instabuild && !player.getInventory().add(drop)) player.drop(drop, false);
+                for (net.minecraft.world.item.ItemStack drop : panel.dismount(c)) {
+                    if (!player.getAbilities().instabuild && !player.getInventory().add(drop)) player.drop(drop, false);
+                }
                 return;
             }
 
